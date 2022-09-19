@@ -25,6 +25,15 @@ terraform plan -out main.tfplan
 ```sh
 terraform apply main.tfplan
 ```
+- Get the Kubernetes configuration from the Terraform state and store it in a file that kubectl can read
+```sh
+echo "$(terraform output kube_config)" > ~/.kube/config
+```
+
+- Verify the health of the cluster
+```sh
+kubectl get nodes
+```
 
 - [Verify the results](https://learn.microsoft.com/en-us/azure/developer/terraform/create-k8s-cluster-with-tf-and-aks#verify-the-results)
 

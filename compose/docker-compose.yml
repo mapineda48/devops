@@ -1,0 +1,128 @@
+version: "3.9"
+
+services:
+
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy
+    container_name: nginx-proxy-container
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certs:/etc/nginx/certs
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+
+  nginx-proxy-acme:
+    image: nginxproxy/acme-companion
+    container_name: nginx-proxy-acme-container
+    volumes_from:
+      - nginx-proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - acme:/etc/acme.sh
+    environment:
+      DEFAULT_EMAIL: ${DEFAULT_EMAIL}
+
+  node_exporter:
+    image: prom/node-exporter
+    container_name: node_exporter-container
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    expose:
+      - 9100
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor
+    container_name: cadvisor-container
+    restart: unless-stopped
+    volumes:
+    - /:/rootfs:ro
+    - /var/run:/var/run:rw
+    - /sys:/sys:ro
+    - /var/lib/docker/:/var/lib/docker:ro
+    expose:
+    - 8080
+
+  prometheus:
+    container_name: prometheus-container
+    image: prom/prometheus:v2.40.7
+    restart: unless-stopped
+    depends_on:
+      - node_exporter
+      - cadvisor
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    expose:
+      - 9090
+
+  promtail:
+    container_name: promtail-container
+    image: grafana/promtail:1.4.1
+    command: -config.file=/etc/promtail/docker-config.yml
+    volumes:
+      - ./promtail/docker-config.yml:/etc/promtail/docker-config.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers # Container logs
+
+  loki:
+    container_name: loki-container
+    image: grafana/loki:1.4.1
+    command: -config.file=/etc/loki/local-config.yml
+    depends_on:
+      - promtail
+    volumes:
+     - ./loki/local-config.yml:/etc/loki/local-config.yml
+    expose:
+      - 3100
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana-container
+    volumes:
+    - ./grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+    environment:
+      - "VIRTUAL_HOST=${GRAFANA_HOST}"
+      - "VIRTUAL_PORT=3000"
+      - "LETSENCRYPT_HOST=${GRAFANA_HOST}"
+      - "LETSENCRYPT_EMAIL=${DEFAULT_EMAIL}"
+    depends_on:
+      - nginx-proxy
+      - nginx-proxy-acme
+      - prometheus
+      - loki
+
+  my-proxied-app:
+    image: nginx
+    container_name: my-proxied-app-container
+    environment:
+      VIRTUAL_HOST: ${APP_HOST}
+      LETSENCRYPT_HOST: ${APP_HOST}
+    depends_on:
+      - nginx-proxy
+      - nginx-proxy-acme
+      - grafana
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"   
+
+volumes:
+  certs:
+  vhost:
+  html:
+  acme:

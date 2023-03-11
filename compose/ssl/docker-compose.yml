@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy:1.2
+    container_name: nginx-proxy-container
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certs:/etc/nginx/certs
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./nginx/proxy.conf:/etc/nginx/proxy.conf:ro
+
+  nginx-proxy-acme:
+    image: nginxproxy/acme-companion:2.2
+    container_name: nginx-proxy-acme-container
+    volumes_from:
+      - nginx-proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - acme:/etc/acme.sh
+    environment:
+      DEFAULT_EMAIL: ${DEFAULT_EMAIL}
+      # ACME_CA_URI: https://acme-staging-v02.api.letsencrypt.org/directory # uncomment if testing enviroment
+
+  my-proxied-app:
+    image: nginx
+    container_name: my-proxied-app-container
+    environment:
+      VIRTUAL_HOST: ${APP_HOST}
+      LETSENCRYPT_HOST: ${APP_HOST}
+    depends_on:
+      - nginx-proxy
+      - nginx-proxy-acme
+
+volumes:
+  certs:
+  vhost:
+  html:
+  acme:

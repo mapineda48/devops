@@ -13,11 +13,11 @@ To test locally, you will need:
 
 ## Ingress-nginx
 
-Ingress-nginx is an ingress controller for Kubernetes that allows us to route traffic to the services deployed in our cluster. It is widely used due to its ease of configuration and flexibility. For more information, visit the [official Ingress-nginx website]((https://kubernetes.github.io/ingress-nginx/)).
+Ingress-nginx is an ingress controller for Kubernetes that allows us to route traffic to the services deployed in our cluster. It is widely used due to its ease of configuration and flexibility. For more information, visit the [official Ingress-nginx website](https://kubernetes.github.io/ingress-nginx/).
 
 ## Cert Manager
 
-Cert Manager is a tool for automating the issuance and renewal of SSL/TLS certificates on Kubernetes clusters. For more information on Cert Manager, visit [their official website]((https://cert-manager.io/)).
+Cert Manager is a tool for automating the issuance and renewal of SSL/TLS certificates on Kubernetes clusters. For more information on Cert Manager, visit [their official website](https://cert-manager.io/).
 
 ## Deploying test service
 

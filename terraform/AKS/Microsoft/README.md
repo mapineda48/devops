@@ -6,8 +6,8 @@
 
 - Create a file called `terraform.tfvars` and put in it you credentials services principal azure.
 ```tfvars
-aks_service_principal_app_id = "<service_principal_app_id>"
-aks_service_principal_client_secret = "<service_principal_password>"
+aks_app_id = "<service_principal_app_id>"
+aks_client_secret = "<service_principal_password>"
 ```
 ## Create Cluster
 

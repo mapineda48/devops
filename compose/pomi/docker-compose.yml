@@ -1,0 +1,99 @@
+version: "3.9"
+
+services:
+
+# https://hub.docker.com/r/nginxproxy/nginx-proxy
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy:1.2
+    container_name: proxy-pomi
+    ports:
+      - "80:80"
+      - "443:443"
+    # environment:
+    #   DEFAULT_ROOT: ${APP_HOST}    
+    volumes:
+      - certs:/etc/nginx/certs
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+
+  nginx-proxy-acme:
+    image: nginxproxy/acme-companion:2.2
+    container_name: acme-pomi
+    volumes_from:
+      - nginx-proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - acme:/etc/acme.sh
+    environment:
+      DEFAULT_EMAIL: ${DEFAULT_EMAIL}
+      ACME_CA_URI: https://acme-staging-v02.api.letsencrypt.org/directory
+
+  minio:
+    image: minio/minio
+    container_name: storage-pomi
+    environment:
+      - "VIRTUAL_HOST=${STORAGE_HOST}"
+      - "VIRTUAL_PORT=9000"
+      - "MINIO_ROOT_USER=minio"
+      - "MINIO_ROOT_PASSWORD=minio12345"
+      - "MINIO_BROWSER=off"
+      - "LETSENCRYPT_HOST=${STORAGE_HOST}"
+    command: server /data --console-address ":9001"
+    depends_on:
+      - nginx-proxy
+
+# https://hub.docker.com/r/minio/console
+  minio-gui:
+    build:
+      context: ./minio-console
+      dockerfile: Dockerfile
+    container_name: minio-gui-pomi
+    environment:
+      - "VIRTUAL_HOST=${MINIO_HOST}"
+      - "VIRTUAL_PORT=9090"
+      - "CONSOLE_MINIO_SERVER=https://${STORAGE_HOST}"
+      - "LETSENCRYPT_HOST=${MINIO_HOST}"
+    command: server
+    depends_on:
+      - nginx-proxy
+      - minio
+
+  db:
+    image: postgres
+    container_name: postgres-pomi
+    restart: always
+    environment:
+      - "POSTGRES_PASSWORD=admin"
+
+# https://www.pgadmin.org/docs/pgadmin4/latest/container_deployment.html
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin4-pomi
+    restart: always
+    environment:
+      - "PGADMIN_DEFAULT_EMAIL=raj@nola.com"
+      - "PGADMIN_DEFAULT_PASSWORD=admin"
+      - "PGADMIN_DEFAULT_SERVER=db"
+      - "VIRTUAL_HOST=${PGADMIN_HOST}"
+      - "LETSENCRYPT_HOST=${PGADMIN_HOST}"
+    volumes:
+      - ./pgadmin4/server.json:/pgadmin4/servers.json
+    depends_on:
+      - nginx-proxy
+      - db
+
+  app:
+    image: nginx
+    container_name: app-pomi
+    environment:
+      VIRTUAL_HOST: ${APP_HOST}
+    depends_on:
+      - nginx-proxy
+
+volumes:
+  certs:
+  vhost:
+  html:
+  acme:
+  data:

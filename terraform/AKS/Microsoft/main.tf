@@ -48,6 +48,7 @@ resource "azurerm_kubernetes_cluster" "k8s" {
     vm_size    = "Standard_D2_v2"
     node_count = var.agent_count
   }
+  
   linux_profile {
     admin_username = "ubuntu"
 

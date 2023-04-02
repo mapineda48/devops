@@ -1,17 +1,9 @@
-# resource "random_pet" "prefix" {}
-
-# resource "random_pet" "acr" {
-#   separator = ""
-# }
-
 variable "project_name" {
-#  default = "${random_pet.prefix.id}"
-  default = "foo"
+  default = "mapineda48"
 }
 
 variable "acr_name" {
-#  default = "${random_pet.acr.id}"
-  default = "fooacr"
+  default = "mapineda48cr"
 }
 
 variable "ssh_public_key" {

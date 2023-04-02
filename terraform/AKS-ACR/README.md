@@ -1,12 +1,4 @@
-# Azure Kubernetes Services
-
-## Before you start
-
-- Create a file called `terraform.tfvars` and put in it you credentials services principal azure.
-```tfvars
-aks_app_id = "<service_principal_app_id>"
-aks_client_secret = "<service_principal_aks_client_secret>"
-```
+# Azure Kubernetes Services - Azure Container Register
 
 ## Create Cluster
 
@@ -21,14 +13,14 @@ terraform apply
 ```
 - Get the Kubernetes configuration from the Terraform state and store it in a file that kubectl can read
 ```sh
-echo "$(terraform output kube_config)" > ~/.kube/config
+# Warning this will ereaser current config
+echo "$(terraform output kube_config)" | sed '1d;$d' > ~/.kube/config
 ```
 
 - Verify the health of the cluster
 ```sh
 kubectl get nodes
 ```
-**Note:** if you have the follow error: `error loading config file "~\.kube\config": yaml: mapping values are not allowed in this context`, you should fix format of kube_config 
 
 ## Common questions
 

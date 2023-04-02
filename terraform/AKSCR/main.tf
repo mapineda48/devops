@@ -67,3 +67,15 @@ resource "azurerm_role_assignment" "acr_role_assignment" {
   role_definition_id = data.azurerm_role_definition.acr_pull.id
   principal_id       = azurerm_kubernetes_cluster.default.identity[0].principal_id
 }
+
+
+# resource "null_resource" "post_apply" {
+#   provisioner "local-exec" {
+#     command = "bash ${path.module}/k8s/apply.sh"
+#   }
+#   depends_on = [
+#     azurerm_container_registry.default,
+#     azurerm_kubernetes_cluster.default,
+#     azurerm_role_assignment.acr_role_assignment
+#   ]
+# }

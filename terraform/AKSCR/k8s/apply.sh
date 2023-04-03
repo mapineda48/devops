@@ -78,4 +78,6 @@ echo "$EXTERNAL_DNS" | kubectl apply -f -
 
 ####################################### ACR ############################################
 
+cd ..
 az acr login -n "$(terraform output -raw acr_login_server)"
+cd k8s

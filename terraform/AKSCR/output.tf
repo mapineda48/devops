@@ -36,3 +36,16 @@ output "kube_config" {
 output "resource_group_name" {
   value = azurerm_resource_group.default.name
 }
+
+output "acr_login_server" {
+  value = azurerm_container_registry.default.login_server
+}
+
+output "acr_admin_username" {
+  value = azurerm_container_registry.default.admin_username
+}
+
+output "acr_admin_password" {
+  value = azurerm_container_registry.default.admin_password
+  sensitive = true
+}

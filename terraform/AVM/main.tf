@@ -124,7 +124,6 @@ resource "azurerm_linux_virtual_machine" "vm_vm" {
 
   provisioner "remote-exec" {
     inline = [
-      #"bash /tmp/script.sh ${var.duckdns_token} >> ~/prepare.log 2>&1 >/dev/null"
       "bash /tmp/script.sh ${var.duckdns_token}"
     ]
     on_failure = continue

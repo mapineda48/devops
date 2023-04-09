@@ -1,5 +1,7 @@
 # https://learn.microsoft.com/en-us/azure/virtual-machines/linux/quick-create-terraform
 # https://www.phillipsj.net/posts/cloud-init-with-terraform/
+# https://developer.hashicorp.com/terraform/language/resources/provisioners/remote-exec?utm_source=terraform-ls&utm_content=documentHover&utm_medium=Visual%20Studio%20Code
+# https://developer.hashicorp.com/terraform/language/resources/provisioners/syntax
 
 resource "random_pet" "project" {}
 
@@ -53,7 +55,7 @@ resource "azurerm_network_security_group" "vm_nsg" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "22"
-    source_address_prefix      = "${data.external.my_address.result.ip}"
+    source_address_prefix      = data.external.my_address.result.ip
     destination_address_prefix = "*"
   }
 }
@@ -106,7 +108,25 @@ resource "azurerm_linux_virtual_machine" "vm_vm" {
     public_key = file("~/.ssh/id_rsa.pub")
   }
 
-  provisioner "local-exec" {
-    command = "curl 'https://www.duckdns.org/update?domains=mapineda48&token=${var.duckdns_token}&ip=${azurerm_linux_virtual_machine.vm_vm.public_ip_address}'"
+
+  connection {
+    type        = "ssh"
+    user        = self.admin_username
+    host        = self.public_ip_address
+    timeout     = "5m"
+    private_key = file("~/.ssh/id_rsa")
+  }
+
+  provisioner "file" {
+    source      = "post-create.sh"
+    destination = "/tmp/script.sh"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      #"bash /tmp/script.sh ${var.duckdns_token} >> ~/prepare.log 2>&1 >/dev/null"
+      "bash /tmp/script.sh ${var.duckdns_token}"
+    ]
+    on_failure = continue
   }
 }

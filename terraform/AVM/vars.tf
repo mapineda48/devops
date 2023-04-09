@@ -4,3 +4,7 @@
 variable "duckdns_token" {
   default = ""
 }
+
+variable "passphrase" {
+  default = ""
+}

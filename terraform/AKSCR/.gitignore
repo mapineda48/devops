@@ -31,3 +31,4 @@ override.tf.json
 *.tfplan
 
 k8s/.env
+k8s/*.log

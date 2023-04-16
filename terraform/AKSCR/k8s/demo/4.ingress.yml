@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: www-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/issuer: cert-manager-global
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    external-dns.alpha.kubernetes.io/hostname: www.mapineda48.xyz
+spec:
+  tls:
+    - hosts:
+        - www.mapineda48.xyz
+      secretName: www-tls
+  rules:
+    - host: www.mapineda48.xyz
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: www-service
+                port:
+                  name: http

@@ -1,27 +1,11 @@
-# Get the current script path
-SCRIPT_PATH=$(realpath "$0")
-
-# Get the directory that contains the script
-SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
-
-cd $SCRIPT_DIR
-
-# Enviroment variables
-source ./.env
+# source ./.env
 
 
+################################## Kubectl config #######################################
+# Configurar kubectl para que use el archivo kubeconfig
+export KUBECONFIG="$(mktemp /tmp/XXXXXXXXXXXXXX)"
 
-
-
-##################################### Kubectl ##########################################
-# Warning this will ereaser current config
-cd ..
-echo "$(terraform output kube_config)" | sed '1d;$d' > ~/.kube/config
-cd k8s
-
-
-
-
+echo "$KUBECONFIG_CONTENTS" | sed '1d;$d' > $KUBECONFIG
 
 
 ################################## Ingress Ngnix #######################################
@@ -30,54 +14,60 @@ cd k8s
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.7.0/deploy/static/provider/cloud/deploy.yaml
 
 
-
-
-
-
-################################## Cert Manager #######################################
+##################################### Cert Manager ######################################
 # https://cert-manager.io/docs/installation/kubectl/
 
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.yaml
+CERT_MANAGER_YML="https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.yaml"
 
-# https://cert-manager.io/docs/configuration/acme/
-CERT_MANAGER=$(cat cert-manager.yml | sed "s/\$CLUSTER_ISSUER_EMAIL/${CLUSTER_ISSUER_EMAIL}/g")
+if [ -n "${CLUSTER_ISSUER_CERT}" ] && kubectl apply -f "$CERT_MANAGER_YML"; then
 
-while true; do
-  echo "$CERT_MANAGER" | kubectl apply -f -
-  
-  if [[ $? -eq 0 ]]; then
-    break
-  fi
+  # https://cert-manager.io/docs/configuration/acme/
+  CLUSTER_ISSUER=$(cat cluster-issuer.yml | sed "s/foo@bar/${CLUSTER_ISSUER_CERT}/g")
 
-  echo "Error al aplicar el manifiesto cert manager, reintentando en 6 segundos..."
-  sleep 6
-done
+  while true; do
+    echo "$CLUSTER_ISSUER" | kubectl apply -f -
+    
+    if [[ $? -eq 0 ]]; then
+      break
+    fi
+
+    echo "Error al aplicar el manifiesto cert manager, reintentando en 6 segundos..."
+    sleep 6
+  done
+
+else
+    echo "Error al aplicar Cert-manager"
+fi
 
 
+##################################### External DNS ######################################
+if [ -n "${GODADDY_API_KEY}" ] && [ -n "${GODADDY_API_SECRET}" ] && [ -n "${GODADDY_DOMAIN}" ]; then
 
+  # Inicializar la variable que contendrá el contenido de todos los archivos
+  EXTERNAL_DNS=""
 
+  # Iterar sobre todos los archivos del directorio actual y concatenar su contenido
+  for FILE in external-dns/*.yml; do
+    if [ -f "$FILE" ]; then
+      # Concatenar el contenido del archivo con un separador
+      EXTERNAL_DNS="$EXTERNAL_DNS$(cat "$FILE")\n\n---\n"
+    fi
+  done
 
-
-
-
-################################## External DNS #######################################
-# # https://github.com/kubernetes-sigs/external-dns/blob/master/docs/tutorials/godaddy.md
-
-EXTERNAL_DNS=$(
-    cat external-dns.yml \
+  EXTERNAL_DNS=$(
+    echo -e "${EXTERNAL_DNS%---}" \
     | sed "s/\$DOMAIN_FILTER/${GODADDY_DOMAIN}/g" \
     | sed "s/\$GODADDY_API_KEY/${GODADDY_API_KEY}/g" \
-    | sed "s/\$GODADDY_API_SECRET/${GODADDY_API_SECRET}/g" \
-    | sed "s/\$CLUSTER_ISSUER_EMAIL/${CLUSTER_ISSUER_EMAIL}/g")
+    | sed "s/\$GODADDY_API_SECRET/${GODADDY_API_SECRET}/g")
 
-echo "$EXTERNAL_DNS" | kubectl apply -f -
+  echo "$EXTERNAL_DNS" | kubectl apply -f -
+
+fi
 
 
-
+################################## Kubectl config #######################################
+rm "$KUBECONFIG"
 
 
 ####################################### ACR ############################################
-
-cd ..
-az acr login -n "$(terraform output -raw acr_login_server)"
-cd k8s
+az acr login -n "$ACR_LOGIN"

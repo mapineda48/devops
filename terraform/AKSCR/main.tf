@@ -63,19 +63,33 @@ resource "azurerm_kubernetes_cluster" "default" {
 }
 
 resource "azurerm_role_assignment" "acr_role_assignment" {
-  scope              = azurerm_container_registry.default.id
-  role_definition_id = data.azurerm_role_definition.acr_pull.id
-  principal_id       = azurerm_kubernetes_cluster.default.identity[0].principal_id
+  principal_id                     = azurerm_kubernetes_cluster.default.kubelet_identity[0].object_id
+  role_definition_id               = data.azurerm_role_definition.acr_pull.id
+  scope                            = azurerm_container_registry.default.id
+  skip_service_principal_aad_check = true
 }
 
+resource "null_resource" "apply_k8s_manifiest" {
+  count = var.apply_k8s_manifiest ? 1 : 0
 
-# resource "null_resource" "post_apply" {
-#   provisioner "local-exec" {
-#     command = "bash ${path.module}/k8s/apply.sh"
-#   }
-#   depends_on = [
-#     azurerm_container_registry.default,
-#     azurerm_kubernetes_cluster.default,
-#     azurerm_role_assignment.acr_role_assignment
-#   ]
-# }
+  depends_on = [
+    azurerm_container_registry.default,
+    azurerm_kubernetes_cluster.default,
+    azurerm_role_assignment.acr_role_assignment
+  ]
+
+  provisioner "local-exec" {
+    command = "cd ${path.module}/k8s && bash apply.sh"
+
+    on_failure = continue
+
+    environment = {
+      CLUSTER_ISSUER_CERT = var.cluster_issuer_cert
+      GODADDY_API_KEY     = var.godaddy_api_key
+      GODADDY_API_SECRET  = var.godaddy_api_secret
+      GODADDY_DOMAIN      = var.godaddy_domain
+      ACR_LOGIN           = var.acr_name
+      KUBECONFIG_CONTENTS = azurerm_kubernetes_cluster.default.kube_config_raw
+    }
+  }
+}

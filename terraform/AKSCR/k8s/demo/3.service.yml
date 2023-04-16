@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: www-service
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-services: "www-service"
+spec:
+  selector:
+    app: www-nginx
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+  type: ClusterIP

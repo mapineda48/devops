@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: www-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: www-nginx
+  template:
+    metadata:
+      labels:
+        app: www-nginx
+    spec:
+      containers:
+        - name: www-nginx
+          image: mapineda48cr.azurecr.io/nginx:latest
+          resources:
+            limits:
+              cpu: 200m
+              memory: 150M
+            requests:
+              cpu: 50m
+              memory: 50M
+          ports:
+            - containerPort: 80

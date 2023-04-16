@@ -41,10 +41,10 @@ variable "ssh_public_key" {
 # The following two variable declarations are placeholder references.
 # Set the values for these variable in terraform.tfvars
 
-variable "aks_service_principal_app_id" {
+variable "aks_app_id" {
   default = ""
 }
 
-variable "aks_service_principal_client_secret" {
+variable "aks_client_secret" {
   default = ""
 }

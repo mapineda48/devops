@@ -19,14 +19,17 @@ variable "apply_k8s_manifiest"{
 
 variable "cluster_issuer_cert" {
   default = ""
+  sensitive   = true
 }
 
 variable "godaddy_api_key" {
   default = ""
+  sensitive   = true
 }
 
 variable "godaddy_api_secret" {
   default = ""
+  sensitive   = true
 }
 
 variable "godaddy_domain" {

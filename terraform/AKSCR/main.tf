@@ -79,9 +79,10 @@ resource "null_resource" "apply_k8s_manifiest" {
   ]
 
   provisioner "local-exec" {
-    command = "cd ${path.module}/k8s && bash apply.sh"
-
+    when       = create
     on_failure = continue
+
+    command = "cd ${path.module}/k8s && bash apply.sh"
 
     environment = {
       CLUSTER_ISSUER_CERT = var.cluster_issuer_cert
@@ -90,6 +91,35 @@ resource "null_resource" "apply_k8s_manifiest" {
       GODADDY_DOMAIN      = var.godaddy_domain
       ACR_LOGIN           = var.acr_name
       KUBECONFIG_CONTENTS = azurerm_kubernetes_cluster.default.kube_config_raw
+    }
+  }
+}
+
+resource "null_resource" "destroy_k8s_manifiest" {
+  count = length(null_resource.apply_k8s_manifiest)
+
+  depends_on = [
+    azurerm_container_registry.default,
+    azurerm_kubernetes_cluster.default,
+    azurerm_role_assignment.acr_role_assignment
+  ]
+
+  triggers = {
+    api_key    = var.godaddy_api_key
+    api_secret = var.godaddy_api_secret
+    domain     = var.godaddy_domain
+  }
+
+  provisioner "local-exec" {
+    when       = destroy
+    on_failure = continue
+
+    command = "bash ${path.module}/k8s/delete_godaddy_records.sh"
+
+    environment = {
+      API_KEY     = self.triggers.api_key
+      API_SECRET  = self.triggers.api_secret
+      DOMAIN      = self.triggers.domain
     }
   }
 }

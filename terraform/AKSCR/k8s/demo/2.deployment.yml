@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: www-deployment
+  name: ${APP_NAME}-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: www-nginx
+      app: ${APP_NAME}-deployment
   template:
     metadata:
       labels:
-        app: www-nginx
+        app: ${APP_NAME}-deployment
     spec:
       containers:
-        - name: www-nginx
-          image: mapineda48cr.azurecr.io/nginx:latest
+        - name: ${APP_NAME}-deployment
+          image: ${DEPLOY_IMAGE}
           resources:
             limits:
               cpu: 200m

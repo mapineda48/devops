@@ -3,9 +3,9 @@ kind: Certificate
 metadata:
   name: certificate
 spec:
-  secretName: www-tls
+  secretName: ${APP_NAME}-tls
   issuerRef:
     name: cert-manager-global
     kind: ClusterIssuer
   dnsNames:
-  - www.mapineda48.xyz
+  - ${APP_NAME}.${DOMAIN}

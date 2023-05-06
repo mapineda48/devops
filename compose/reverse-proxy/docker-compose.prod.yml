@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  nginx-proxy:
+    environment:
+      - "HTTPS_METHOD=redirect"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certs:/etc/nginx/certs
+      - ./nginx/proxy.conf:/etc/nginx/proxy.conf:ro
+
+  nginx-proxy-acme:
+    image: nginxproxy/acme-companion:2.2
+    container_name: nginx-proxy-acme-container
+    volumes_from:
+      - nginx-proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - acme:/etc/acme.sh
+    environment:
+      DEFAULT_EMAIL: ${EMAIL_ISSUER_CERT}
+
+volumes:
+  certs:
+  acme:

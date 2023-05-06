@@ -16,7 +16,7 @@ crontab /tmp/crontab.tmp
 rm /tmp/crontab.tmp
 
 #################################### Docker ########################################
-https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository
+# https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository
 
 sudo apt-get install -y ca-certificates curl gnupg
 

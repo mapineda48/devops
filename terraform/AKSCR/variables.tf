@@ -11,5 +11,5 @@ variable "ssh_public_key" {
 }
 
 variable "win_admin_username" {
-  default = "adminuser"
+  default = "" #if set it will create a node pool
 }

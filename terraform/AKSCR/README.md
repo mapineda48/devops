@@ -44,22 +44,6 @@ To test locally, you will need:
 - `kubectl` installed on your system.
 - A registered domain with a DNS service provider such as GoDaddy.
 
-### Usage
-
-In order to apply the manifests, you'll need to create a terraform.tfvars file with the corresponding variables. Terraform will apply these configurations once the infrastructure is fully created. Please note that this step is optional and currently only works on Debian-based Linux distributions.
-
-```tfvars
-apply_k8s_manifiest=true
-
-cluster_issuer_cert="foo@bar"
-
-godaddy_api_key="my-api-key-godaddy"
-
-godaddy_api_secret="my-api-secret-godaddy"
-
-godaddy_domain="my-domain-godaddy"
-```
-
 ## FAQs
 
 - ¿How can I obtain the IP of the Ingress-nginx to configure the DNS?
@@ -82,6 +66,7 @@ terraform destroy
 
 # Official Documentation
 
+- https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/3.0-upgrade-guide
 - [Provision an AKS Cluster (Azure)](https://learn.hashicorp.com/tutorials/terraform/aks)
 - https://kubernetes.github.io/ingress-nginx/deploy/#azure
 - https://learn.microsoft.com/en-us/azure/aks/ingress-basic?tabs=azure-cli#create-an-ingress-controller

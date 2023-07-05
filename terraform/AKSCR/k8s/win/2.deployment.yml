@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${APP_NAME}-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${APP_NAME}-deployment
+  template:
+    metadata:
+      labels:
+        app: ${APP_NAME}-deployment
+      annotations:
+        scheduler.alpha.kubernetes.io/tolerations: '[{"key":"OS","operator":"Equal","value":"Windows","effect":"NoSchedule"}]'
+    spec:
+      tolerations:
+        - key: OS
+          operator: Equal
+          value: Windows
+          effect: NoSchedule
+      containers:
+        - name: ${APP_NAME}-deployment
+          image: ${DEPLOY_IMAGE}
+          ports:
+            - containerPort: 443

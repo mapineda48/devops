@@ -10,6 +10,7 @@ variable "ssh_public_key" {
   default = "~/.ssh/id_rsa.pub"
 }
 
+# Optional - Only if need user window image
 variable "win_admin_username" {
-  default = "" #if set it will create a node pool
+  default = ""
 }

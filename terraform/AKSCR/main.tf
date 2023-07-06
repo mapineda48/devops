@@ -1,12 +1,5 @@
-resource "random_password" "password" {
-  length           = 16
-  special          = true
-  override_special = "_%@"
-  # sensitive        = true
-
-  lifecycle {
-    ignore_changes = [result]
-  }
+locals {
+  needWinNodePool = var.win_admin_username != ""
 }
 
 data "azurerm_role_definition" "acr_pull" {
@@ -36,6 +29,18 @@ resource "azurerm_container_registry" "default" {
 
   tags = {
     environment = "Development"
+  }
+}
+
+resource "random_password" "win_password" {
+  count = local.needWinNodePool ? 1 : 0
+  length           = 16
+  special          = true
+  override_special = "_%@"
+  # sensitive        = true
+
+  lifecycle {
+    # ignore_changes = [result]
   }
 }
 
@@ -74,22 +79,25 @@ resource "azurerm_kubernetes_cluster" "default" {
 
   # Windows Settings
   dynamic "windows_profile" {
-    for_each = var.win_admin_username != "" ? [1] : [] # Conditional Block - Experimental
+    for_each = local.needWinNodePool ? [1] : [] 
     content {
       admin_username = var.win_admin_username
-      admin_password = random_password.password.result
+      admin_password = random_password.win_password[0].result
     }
   }
 
   # https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kubernetes_cluster#network_plugin
-  network_profile {
-    network_plugin = var.win_admin_username != "" ? "azure" : "kubenet"
+  dynamic "network_profile" {
+    for_each = local.needWinNodePool ? [1] : [] 
+    content {
+      network_plugin = "azure"
+    }
   }
 }
 
 
 resource "azurerm_kubernetes_cluster_node_pool" "window" {
-  count = var.win_admin_username != "" ? 1 : 0
+  count = local.needWinNodePool ? 1 : 0
   name                  = "win"
   kubernetes_cluster_id = azurerm_kubernetes_cluster.default.id
   node_count            = 1
@@ -114,8 +122,7 @@ resource "azurerm_role_assignment" "acr_role_assignment" {
   skip_service_principal_aad_check = true
 }
 
-# Optional K8s Manifiest - Personal Testing Settings - Experimental
-
+# Optional K8s Manifiest - Personal Testing Settings 
 locals {
   secret_json    = "${path.module}/k8s/secret.json"
   template_json  = "${path.module}/k8s/template.json"

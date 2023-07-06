@@ -32,3 +32,4 @@ override.tf.json
 
 k8s/.env
 k8s/*.log
+k8s/secret.json

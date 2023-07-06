@@ -1,5 +1,4 @@
-# source ./.env
-
+#source ./.env
 
 ################################## Kubectl config #######################################
 # Configurar kubectl para que use el archivo kubeconfig
@@ -22,7 +21,7 @@ CERT_MANAGER_YML="https://github.com/cert-manager/cert-manager/releases/download
 if [ -n "${CLUSTER_ISSUER_CERT}" ] && kubectl apply -f "$CERT_MANAGER_YML"; then
 
   # https://cert-manager.io/docs/configuration/acme/
-  CLUSTER_ISSUER=$(cat cluster-issuer.yml | sed "s/foo@bar/${CLUSTER_ISSUER_CERT}/g")
+  CLUSTER_ISSUER=$(envsubst < cluster-issuer.yml)
 
   while true; do
     echo "$CLUSTER_ISSUER" | kubectl apply -f -
@@ -54,14 +53,7 @@ if [ -n "${GODADDY_API_KEY}" ] && [ -n "${GODADDY_API_SECRET}" ] && [ -n "${GODA
     fi
   done
 
-  EXTERNAL_DNS=$(
-    echo -e "${EXTERNAL_DNS%---}" \
-    | sed "s/\$DOMAIN_FILTER/${GODADDY_DOMAIN}/g" \
-    | sed "s/\$GODADDY_API_KEY/${GODADDY_API_KEY}/g" \
-    | sed "s/\$GODADDY_API_SECRET/${GODADDY_API_SECRET}/g")
-
-  echo "$EXTERNAL_DNS" | kubectl apply -f -
-
+  echo -e "${EXTERNAL_DNS%---}" | envsubst | kubectl apply -f - 
 fi
 
 

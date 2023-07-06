@@ -20,10 +20,10 @@ spec:
         image: registry.k8s.io/external-dns/external-dns:v0.13.4
         args:
         - --source=ingress # service is also possible
-        - --domain-filter=$DOMAIN_FILTER # (optional) limit to only example.com domains; change to match the zone created above.
+        - --domain-filter=$GODADDY_DOMAIN # (optional) limit to only example.com domains; change to match the zone created above.
         - --provider=godaddy
-        - --txt-prefix=external-dns. # In case of multiple k8s cluster
-        - --txt-owner-id=mapineda48 # In case of multiple k8s cluster
+        - --txt-prefix=external-dns # In case of multiple k8s cluster
+        - --txt-owner-id=external-dns # In case of multiple k8s cluster
         - --godaddy-api-key=$GODADDY_API_KEY
         - --godaddy-api-secret=$GODADDY_API_SECRET
         resources:

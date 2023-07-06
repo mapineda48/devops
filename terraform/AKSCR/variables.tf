@@ -10,25 +10,7 @@ variable "ssh_public_key" {
   default = "~/.ssh/id_rsa.pub"
 }
 
-
-#################################### Optionals ############################################
-
-variable "apply_k8s_manifiest"{
-  default = false
-}
-
-variable "cluster_issuer_cert" {
-  default = ""
-}
-
-variable "godaddy_api_key" {
-  default = ""
-}
-
-variable "godaddy_api_secret" {
-  default = ""
-}
-
-variable "godaddy_domain" {
+# Optional - Only if need user window image
+variable "win_admin_username" {
   default = ""
 }

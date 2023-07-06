@@ -11,16 +11,16 @@ spec:
     metadata:
       labels:
         app: ${APP_NAME}-deployment
+      annotations:
+        scheduler.alpha.kubernetes.io/tolerations: '[{"key":"OS","operator":"Equal","value":"Windows","effect":"NoSchedule"}]'
     spec:
+      tolerations:
+        - key: OS
+          operator: Equal
+          value: Windows
+          effect: NoSchedule
       containers:
         - name: ${APP_NAME}-deployment
           image: ${DEPLOY_IMAGE}
-          resources:
-            limits:
-              cpu: 200m
-              memory: 150M
-            requests:
-              cpu: 50m
-              memory: 50M
           ports:
-            - containerPort: 80
+            - containerPort: 443

@@ -1,2 +1,0 @@
-minio-console/ca-trust/*
-!minio-console/ca-trust/add.sh

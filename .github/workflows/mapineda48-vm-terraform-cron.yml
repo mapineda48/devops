@@ -45,7 +45,6 @@ jobs:
           resource_group_name  = "${{ secrets.BACKEND_RG }}"
           storage_account_name = "${{ secrets.BACKEND_STORAGE_ACCOUNT }}"
           container_name       = "${{ secrets.BACKEND_CONTAINER }}"
-          key                  = "${{ secrets.BACKEND_KEY }}"
           EOF
 
       - name: Terraform Init

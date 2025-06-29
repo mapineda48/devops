@@ -39,6 +39,11 @@ jobs:
           echo "ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
           echo "ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
 
+      - name: Export TF_VAR_* variables for Terraform
+        run: |
+          echo "TF_VAR_STORAGE_ACCOUNTNAME=${{ secrets.VM_STORAGE_ACCOUNT }}" >> $GITHUB_ENV
+          echo "TF_VAR_STORAGE_ACCOUNTKEY=${{ secrets.VM_STORAGE_ACCOUNTKEY }}" >> $GITHUB_ENV
+
       - name: Write backend.hcl from secrets
         run: |
           cat > backend.hcl <<EOF

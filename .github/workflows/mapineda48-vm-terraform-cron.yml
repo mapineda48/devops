@@ -68,7 +68,7 @@ jobs:
             terraform apply -auto-approve
           elif [[ "$ACTION" == "destroy" ]]; then
             echo "💥 Forcing destroy..."
-            terraform destroy -auto-approve
+            terraform destroy -auto-approve -lock=false
           else
             HOUR=$(TZ="America/Bogota" date +"%H")
             echo "Auto mode. Colombia time is $HOUR"

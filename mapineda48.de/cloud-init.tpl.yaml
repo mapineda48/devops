@@ -298,7 +298,6 @@ write_files:
 
   - path: /opt/mapineda48/proxy/docker-compose.yml
     permissions: '0644'
-    owner: azureuser:azureuser
     content: |
       services:
         nginx-proxy:
@@ -368,6 +367,30 @@ write_files:
             - "3000"
           networks:
             - mapineda48-net
+
+        prometheus:
+          image: prom/prometheus:v2.52.0
+          container_name: mapineda48-prometheus
+          volumes:
+            - /mnt/deploy/mapineda48.vm/prometheus:/etc/prometheus
+          command:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+          networks:
+            - mapineda48-net
+
+        promtail:
+          image: grafana/promtail:2.9.3
+          container_name: mapineda48-promtail
+          volumes:
+            - /var/log:/var/log
+            - /var/lib/docker/containers:/var/lib/docker/containers:ro
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - /mnt/deploy/mapineda48.vm/promtail:/etc/promtail
+            - /etc/machine-id:/etc/machine-id:ro
+          command:
+            - "-config.file=/etc/promtail/config.yml"
+          networks:
+            - mapineda48-net
             
       networks:
         mapineda48-net:
@@ -375,7 +398,6 @@ write_files:
 
   - path: /etc/systemd/system/mapineda48-docker-compose.service
     permissions: '0644'
-    owner: root:root
     content: |
       [Unit]
       Description=Docker Compose Service for mapineda48

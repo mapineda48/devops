@@ -56,7 +56,7 @@ jobs:
         run: terraform init -backend-config=backend.hcl
 
       - name: Terraform Plan
-        run: terraform plan
+        run: terraform plan -lock=false
 
       - name: Terraform Apply or Destroy
         run: |

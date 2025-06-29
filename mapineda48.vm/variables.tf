@@ -34,10 +34,10 @@ variable "dns_subdomain_dockerhub_webhook" {
   default     = "dockerhub-webhook"
 }
 
-variable "AGAPE_TENANT" {
-  description = "Tenant identifier for Agape app"
+variable "ssh_public_key_path" {
   type        = string
-  default     = "demo"
+  default     = "~/.ssh/id_rsa.pub"
+  description = "Ruta al archivo de la clave pública SSH"
 }
 
 variable "SOURCE_IP" {
@@ -53,25 +53,5 @@ variable "STORAGE_ACCOUNTNAME" {
 
 variable "STORAGE_ACCOUNTKEY" {
   description = "Azure Storage Account Key"
-  type        = string
-}
-
-variable "STORAGE_CONNECTION_STRING" {
-  description = "Azure Storage Connection String"
-  type        = string
-}
-
-variable "DEFAULT_EMAIL_ACME" {
-  description = "Email address used for Let's Encrypt registration"
-  type        = string
-}
-
-variable "DOCKERHUB_WEBHOOK_SECRET" {
-  description = "Secret token used by the DockerHub webhook"
-  type        = string
-}
-
-variable "DATABASE_URI" {
-  description = "Connection string for the database"
   type        = string
 }

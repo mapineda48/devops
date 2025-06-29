@@ -2,30 +2,6 @@ provider "azurerm" {
   features {}
 }
 
-resource "random_string" "agape_secret" {
-  length  = 64
-  upper   = true
-  lower   = true
-  numeric = true
-  special = false
-}
-
-resource "random_string" "agape_admin" {
-  length  = 64
-  upper   = true
-  lower   = true
-  numeric = true
-  special = false
-}
-
-resource "random_string" "agape_password" {
-  length  = 64
-  upper   = true
-  lower   = true
-  numeric = true
-  special = false
-}
-
 resource "azurerm_resource_group" "agape_app" {
   name     = var.resource_group_name
   location = var.resource_group_location
@@ -117,6 +93,10 @@ resource "azurerm_subnet_network_security_group_association" "subnet_nsg_assoc" 
   network_security_group_id = azurerm_network_security_group.nsg.id
 }
 
+locals {
+  public_key = try(file(var.ssh_public_key_path), "")
+}
+
 resource "azurerm_linux_virtual_machine" "vm" {
   name                = var.dns_subdomain
   location            = azurerm_resource_group.agape_app.location
@@ -126,9 +106,12 @@ resource "azurerm_linux_virtual_machine" "vm" {
 
   network_interface_ids = [azurerm_network_interface.nic.id]
 
-  admin_ssh_key {
-    username   = "azureuser"
-    public_key = file("~/.ssh/id_rsa.pub")
+  dynamic "admin_ssh_key" {
+    for_each = local.public_key != "" ? [1] : []
+    content {
+      username   = "azureuser"
+      public_key = local.public_key
+    }
   }
 
   os_disk {
@@ -145,20 +128,8 @@ resource "azurerm_linux_virtual_machine" "vm" {
   }
 
 custom_data = base64encode(templatefile("${path.module}/cloud-init.tpl.yaml", {
-
-  dockerhub_webhook_fqdn    = "${var.dns_subdomain_dockerhub_webhook}.${var.dns_zone_name}"
-  agape_app_fqdn            = "${var.dns_subdomain}.${var.dns_zone_name}"
-  agape_secret              = random_string.agape_secret.result
-  agape_admin               = random_string.agape_admin.result
-  agape_password            = random_string.agape_password.result
-
   storage_account_name      = var.STORAGE_ACCOUNTNAME
   storage_account_key       = var.STORAGE_ACCOUNTKEY
-  default_email_acme        = var.DEFAULT_EMAIL_ACME
-  dockerhub_webhook_secret  = var.DOCKERHUB_WEBHOOK_SECRET
-  database_uri              = var.DATABASE_URI
-  azure_connection_string   = var.STORAGE_CONNECTION_STRING
-  agape_tenant              = var.AGAPE_TENANT
 }))
 
   disable_password_authentication = true

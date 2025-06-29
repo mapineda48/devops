@@ -1,0 +1,81 @@
+name: Terraform Mapineda48 VM Cron Jobs
+
+on:
+  schedule:
+    - cron: '0 12 * * *'   # 7:00 AM Colombia (apply) - 12:00 UTC
+    - cron: '0 0 * * *'    # 7:00 PM Colombia (destroy) - 00:00 UTC
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform action to perform (apply/destroy/auto)'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - apply
+          - destroy
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./mapineda48.vm  
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+
+      - name: Export ARM_* variables for Terraform
+        run: |
+          echo "ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
+          echo "ARM_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}" >> $GITHUB_ENV
+          echo "ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
+          echo "ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
+
+      - name: Write backend.hcl from secrets
+        run: |
+          cat > backend.hcl <<EOF
+          resource_group_name  = "${{ secrets.BACKEND_RG }}"
+          storage_account_name = "${{ secrets.BACKEND_STORAGE_ACCOUNT }}"
+          container_name       = "${{ secrets.BACKEND_CONTAINER }}"
+          key                  = "${{ secrets.BACKEND_KEY }}"
+          EOF
+
+      - name: Terraform Init
+        run: terraform init -backend-config=backend.hcl
+
+      - name: Terraform Plan
+        run: terraform plan
+
+      - name: Terraform Apply or Destroy
+        run: |
+          ACTION="${{ github.event.inputs.action }}"
+          echo "Input action: $ACTION"
+
+          if [[ "$ACTION" == "apply" ]]; then
+            echo "🚀 Forcing apply..."
+            terraform apply -auto-approve
+          elif [[ "$ACTION" == "destroy" ]]; then
+            echo "💥 Forcing destroy..."
+            terraform destroy -auto-approve
+          else
+            HOUR=$(TZ="America/Bogota" date +"%H")
+            echo "Auto mode. Colombia time is $HOUR"
+
+            if [[ "$HOUR" == "07" ]]; then
+              echo "✅ 7 AM Colombia → Applying infrastructure..."
+              terraform apply -auto-approve
+            elif [[ "$HOUR" == "19" ]]; then
+              echo "❌ 7 PM Colombia → Destroying infrastructure..."
+              terraform destroy -auto-approve
+            else
+              echo "⏭️ Skipping – not the right time (auto mode)"
+            fi
+          fi

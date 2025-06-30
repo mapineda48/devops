@@ -34,10 +34,10 @@ variable "dns_subdomain_dockerhub_webhook" {
   default     = "dockerhub-webhook"
 }
 
-variable "ssh_public_key_path" {
+variable "SSH_PUBLIC_KEY" {
   type        = string
-  default     = "~/.ssh/id_rsa.pub"
-  description = "Ruta al archivo de la clave pública SSH"
+  default     = ""
+  description = "Clave pública SSH"
 }
 
 variable "SOURCE_IP" {

@@ -16,7 +16,7 @@ resource "azurerm_virtual_network" "vnet" {
 
 resource "azurerm_subnet" "subnet" {
   name                 = "subnet-deploy"
-  resource_group_name = azurerm_resource_group.agape_app.name
+  resource_group_name  = azurerm_resource_group.agape_app.name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = ["10.0.1.0/24"]
 }
@@ -94,7 +94,7 @@ resource "azurerm_subnet_network_security_group_association" "subnet_nsg_assoc" 
 }
 
 locals {
-  public_key = try(file(var.ssh_public_key_path), "")
+  public_key = try(file("~/.ssh/id_rsa.pub"), var.SSH_PUBLIC_KEY)
 }
 
 resource "azurerm_linux_virtual_machine" "vm" {
@@ -106,12 +106,9 @@ resource "azurerm_linux_virtual_machine" "vm" {
 
   network_interface_ids = [azurerm_network_interface.nic.id]
 
-  dynamic "admin_ssh_key" {
-    for_each = local.public_key != "" ? [1] : []
-    content {
-      username   = "azureuser"
-      public_key = local.public_key
-    }
+  admin_ssh_key {
+    username   = "azureuser"
+    public_key = local.public_key
   }
 
   os_disk {
@@ -127,10 +124,10 @@ resource "azurerm_linux_virtual_machine" "vm" {
     version   = "latest"
   }
 
-custom_data = base64encode(templatefile("${path.module}/cloud-init.tpl.yaml", {
-  storage_account_name      = var.STORAGE_ACCOUNTNAME
-  storage_account_key       = var.STORAGE_ACCOUNTKEY
-}))
+  custom_data = base64encode(templatefile("${path.module}/cloud-init.tpl.yaml", {
+    storage_account_name = var.STORAGE_ACCOUNTNAME
+    storage_account_key  = var.STORAGE_ACCOUNTKEY
+  }))
 
   disable_password_authentication = true
 }

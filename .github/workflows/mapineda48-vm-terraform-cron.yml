@@ -43,6 +43,7 @@ jobs:
         run: |
           echo "TF_VAR_STORAGE_ACCOUNTNAME=${{ secrets.VM_STORAGE_ACCOUNT }}" >> $GITHUB_ENV
           echo "TF_VAR_STORAGE_ACCOUNTKEY=${{ secrets.VM_STORAGE_ACCOUNTKEY }}" >> $GITHUB_ENV
+          echo "TF_VAR_SSH_PUBLIC_KEY=${{ secrets.VM_SSH_PUBLIC_KEY }}" >> $GITHUB_ENV
 
       - name: Write backend.hcl from secrets
         run: |

@@ -77,7 +77,7 @@ jobs:
             if [[ "$HOUR" == "07" ]]; then
               echo "✅ 7 AM Colombia → Applying infrastructure..."
               terraform apply -auto-approve
-            elif [[ "$HOUR" == "19" ]]; then
+            elif (( 10#$HOUR >= 19 )); then
               echo "❌ 7 PM Colombia → Destroying infrastructure..."
               terraform destroy -auto-approve
             else

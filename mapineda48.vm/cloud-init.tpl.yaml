@@ -139,7 +139,7 @@ runcmd:
   # Nodejs
   - curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
   - apt-get install -y nodejs
-  - npm install -g dockerode@4.0.7
+  - npm install -g dockerode@4.0.7 express@5.1.0
 
   # Habilitar el servicios
   - systemctl enable mapineda48-blobfuse2-deploy

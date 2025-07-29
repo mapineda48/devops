@@ -97,8 +97,9 @@ locals {
   public_key = try(file("~/.ssh/id_rsa.pub"), var.SSH_PUBLIC_KEY)
 }
 
+
 resource "azurerm_linux_virtual_machine" "vm" {
-  name                = var.dns_subdomain
+  name                = "mapineda48"
   location            = azurerm_resource_group.agape_app.location
   resource_group_name = azurerm_resource_group.agape_app.name
   size                = "Standard_B2s"
@@ -125,23 +126,17 @@ resource "azurerm_linux_virtual_machine" "vm" {
   }
 
   custom_data = base64encode(templatefile("${path.module}/cloud-init.tpl.yaml", {
-    storage_account_name = var.STORAGE_ACCOUNTNAME
-    storage_account_key  = var.STORAGE_ACCOUNTKEY
-  }))
+      storage_account_name = var.STORAGE_ACCOUNTNAME
+      storage_account_key  = var.STORAGE_ACCOUNTKEY
+    }))
 
   disable_password_authentication = true
 }
 
-resource "azurerm_dns_a_record" "vm_subdomain" {
-  name                = var.dns_subdomain
-  zone_name           = var.dns_zone_name
-  resource_group_name = var.resource_group_name_mapineda48
-  ttl                 = 300
-  records             = [azurerm_public_ip.public_ip.ip_address]
-}
+resource "azurerm_dns_a_record" "subdomains" {
+  for_each = toset(var.subdomains)
 
-resource "azurerm_dns_a_record" "dockerhub_webhook_subdomain" {
-  name                = var.dns_subdomain_dockerhub_webhook
+  name                = each.value
   zone_name           = var.dns_zone_name
   resource_group_name = var.resource_group_name_mapineda48
   ttl                 = 300

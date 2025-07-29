@@ -3,7 +3,10 @@ output "public_ip_address" {
   description = "Dirección IP pública de la VM para conexión SSH"
 }
 
-output "vm_fqdn" {
-  value = "${var.dns_subdomain}.${var.dns_zone_name}"
-  description = "Subdominio apuntando a la VM"
+output "vm_fqdns" {
+  value = [
+    for subdomain in var.subdomains :
+    "${subdomain}.${var.dns_zone_name}"
+  ]
+  description = "Lista de subdominios apuntando a la IP pública de la VM"
 }

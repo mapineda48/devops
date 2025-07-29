@@ -22,16 +22,9 @@ variable "dns_zone_name" {
   type        = string
 }
 
-variable "dns_subdomain" {
-  description = "Subdominio que se va a crear"
-  type        = string
-  default     = "agape-app"
-}
-
-variable "dns_subdomain_dockerhub_webhook" {
-  description = "Fully qualified domain name for the DockerHub webhook"
-  type        = string
-  default     = "dockerhub-webhook"
+variable "subdomains" {
+  type    = list(string)
+  default = ["agape-app", "vm-webhook"]
 }
 
 variable "SSH_PUBLIC_KEY" {

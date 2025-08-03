@@ -1,0 +1,58 @@
+server:
+  http_listen_port: 0
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: <URL GRAFANA>
+
+scrape_configs:
+  # Logs del sistema (VM)
+  - job_name: vm-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: syslog
+          source: vm
+          __path__: /var/log/*.log
+
+  # Logs del journal de systemd
+  - job_name: systemd-journal-logs
+    journal:
+      path: /var/log/journal
+      max_age: 24h
+      labels:
+        job: init-services
+    relabel_configs:
+      - source_labels: ['__journal__systemd_unit']
+        regex: 'mapineda48-docker-socket\.service'
+        action: keep
+      - source_labels: ['__journal__hostname']
+        target_label: unit
+
+  # Logs de contenedores Docker
+  - job_name: docker-logs
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+
+    relabel_configs:
+      - source_labels: [__meta_docker_container_log_path]
+        target_label: __path__
+      - source_labels: [__meta_docker_container_name]
+        regex: "/(.*)"
+        target_label: container_name
+      - source_labels: [__meta_docker_container_image]
+        target_label: image
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: service_name
+      - target_label: source
+        replacement: container
+      - target_label: job
+        replacement: docker
+
+    pipeline_stages:
+      - docker: {}  # parsea JSON de logs de Docker

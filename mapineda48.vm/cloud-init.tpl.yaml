@@ -72,7 +72,7 @@ write_files:
 
       [Service]
       Environment=NODE_PATH=/usr/lib/node_modules
-      ExecStart=/usr/bin/env node /mnt/deploy/mapineda48.vm/docker/socket.js
+      ExecStart=/usr/bin/env node /mnt/deploy/mapineda48.vm/docker/panel/socket.js
       Restart=always
       RestartSec=5
       User=root

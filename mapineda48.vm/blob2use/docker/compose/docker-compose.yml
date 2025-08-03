@@ -1,0 +1,83 @@
+version: "3.9"
+
+services:
+  # https://hub.docker.com/r/nginxproxy/nginx-proxy
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy:1.7
+    container_name: mapineda48-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      TRUST_DOWNSTREAM_PROXY: "false"
+    volumes:
+      - /mnt/deploy/mapineda48.vm/ngnix/certs:/etc/nginx/certs
+      - /mnt/deploy/mapineda48.vm/ngnix/vhost:/etc/nginx/vhost.d
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - mapineda48-net
+
+  nginx-proxy-acme:
+    image: nginxproxy/acme-companion:2.6
+    container_name: mapineda48-acme
+    environment:
+      DEFAULT_EMAIL: < DEFAULT_EMAIL >
+      ACME_CA_URI: https://acme-v02.api.letsencrypt.org/directory
+      NGINX_PROXY_CONTAINER: mapineda48-proxy
+    volumes:
+      - /mnt/deploy/mapineda48.vm/ngnix/certs:/etc/nginx/certs
+      - /mnt/deploy/mapineda48.vm/ngnix/vhost:/etc/nginx/vhost.d
+      - /opt/mapineda48/proxy/html:/usr/share/nginx/html
+      - /mnt/deploy/mapineda48.vm/acme:/etc/acme.sh
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - mapineda48-net
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: mapineda48-cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - mapineda48-net
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: mapineda48-prometheus
+    volumes:
+      - /mnt/deploy/mapineda48.vm/prometheus:/etc/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    networks:
+      - mapineda48-net
+
+  promtail:
+    image: grafana/promtail:2.9.3
+    container_name: mapineda48-promtail
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/log/journal:/var/log/journal:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /mnt/deploy/mapineda48.vm/promtail:/etc/promtail
+      - /etc/machine-id:/etc/machine-id:ro
+    command:
+      - "-config.file=/etc/promtail/config.yml"
+    networks:
+      - mapineda48-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: mapineda48-redis
+    restart: unless-stopped
+    networks:
+      - mapineda48-net
+
+networks:
+  mapineda48-net:
+    name: mapineda48-net

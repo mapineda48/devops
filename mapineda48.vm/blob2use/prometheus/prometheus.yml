@@ -1,0 +1,18 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["mapineda48-cadvisor:8080"]
+
+remote_write:
+- url: https://prometheus-prod-56-prod-us-east-2.grafana.net/api/prom/push
+  basic_auth:
+    username: < USERNAME GRAFANA >
+    password: < PASSWORD GRAFANA >

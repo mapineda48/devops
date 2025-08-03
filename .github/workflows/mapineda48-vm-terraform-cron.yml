@@ -2,8 +2,8 @@ name: Terraform Mapineda48 VM Cron Jobs
 
 on:
   schedule:
-    - cron: '0 12 * * *'   # 7:00 AM Colombia (apply) - 12:00 UTC
-    - cron: '0 0 * * *'    # 7:00 PM Colombia (destroy) - 00:00 UTC
+    # - cron: '0 12 * * *'   # 7:00 AM Colombia (apply) - 12:00 UTC
+    # - cron: '0 0 * * *'    # 7:00 PM Colombia (destroy) - 00:00 UTC
   workflow_dispatch:
     inputs:
       action:

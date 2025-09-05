@@ -1,0 +1,288 @@
+name: Terraform Mapineda48 Cron Jobs AKS Ephemeral Cluster with Velero (Apply/Destroy)
+
+on:
+  schedule:
+    - cron: '0 12 * * *'   # 7:00 AM Colombia (apply) - 12:00 UTC
+    - cron: '0 0 * * *'    # 7:00 PM Colombia (destroy) - 00:00 UTC
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform action to perform (apply/destroy/auto)'
+        required: false
+        default: 'auto'
+        type: choice
+        options: [auto, apply, destroy]
+
+jobs:
+  terraform-aks:
+    runs-on: ubuntu-latest
+    env:
+      TF_WORKDIR: ./mapineda48.aks          # ⬅️ ajusta a tu carpeta real de Terraform
+      BACKUP_NAMESPACES: cert-manager,ingress-nginx,default
+      CERT_MANAGER_VERSION: v1.18.2         # ⬅️ alínealo con tu versión deseada
+      VELERO_PLUGIN_AZURE: velero/velero-plugin-for-microsoft-azure:v1.12.2
+      VELERO_BACKUP_PREFIX: cm-backup       # prefijo para nombrar los backups
+
+    defaults:
+      run:
+        working-directory: ${{ env.TF_WORKDIR }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+
+      # Login a Azure para az CLI (kubectl/aks context y Velero install)
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # (Opcional) Backend remoto de Terraform como ya lo tienes
+      - name: Write backend.hcl from secrets
+        run: |
+          cat > backend.hcl <<EOF
+          resource_group_name  = "${{ secrets.BACKEND_RG }}"
+          storage_account_name = "${{ secrets.BACKEND_STORAGE_ACCOUNT }}"
+          container_name       = "${{ secrets.BACKEND_CONTAINER }}"
+          EOF
+
+      - name: Terraform Init
+        run: terraform init -backend-config=backend.hcl
+
+      - name: Terraform Plan
+        run: terraform plan
+
+      # Instala Velero CLI en el runner (para ejecutar velero backup/restore)
+      - name: Install Velero CLI
+        run: |
+          curl -sSL https://github.com/vmware-tanzu/velero/releases/download/v1.16.2/velero-v1.16.2-linux-amd64.tar.gz -o /tmp/velero.tgz
+          tar -xzf /tmp/velero.tgz -C /tmp
+          sudo mv /tmp/velero-v1.16.2-linux-amd64/velero /usr/local/bin/velero
+          velero version
+
+      # Crea archivo de credenciales para el plugin de Azure (lo usará el server de Velero)
+      - name: Prepare Velero credentials file
+        run: |
+          cat > credentials-velero <<EOF
+          AZURE_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_RESOURCE_GROUP=${{ secrets.BACKEND_RG }}
+          AZURE_CLOUD_NAME=AzurePublicCloud
+          EOF
+
+      # Acción principal (apply/destroy/auto con lógica de horarios)
+      - name: Terraform Apply / Destroy + Velero (Backup/Restore)
+        id: main
+        shell: bash
+        env:
+          EXTERNALDNS_CHART_VERSION: ""   # opcional, ej. "8.7.2" para fijar versión bitnami/external-dns
+          INGRESS_NGINX_CHART_VERSION: "" # opcional, ej. "4.11.2" para fijar versión ingress-nginx
+        run: |
+          set -euo pipefail
+
+          ACTION="${{ github.event.inputs.action }}"
+          if [[ -z "${ACTION}" || "${ACTION}" == "auto" ]]; then
+            HOUR=$(TZ="America/Bogota" date +"%H")
+            echo "Auto mode. Colombia hour: $HOUR"
+            if [[ "$HOUR" == "07" ]]; then
+              ACTION="apply"
+            elif (( 10#$HOUR >= 19 )); then
+              ACTION="destroy"
+            else
+              echo "⏭️ Not the right time (auto mode). Exiting."
+              exit 0
+            fi
+          fi
+          echo "Resolved ACTION: $ACTION"
+
+          # Helper para obtener nombre/rg del cluster desde outputs de Terraform
+          get_tf_outputs() {
+            AKS_NAME=$(terraform output -raw aks_cluster_name)
+            AKS_RG=$(terraform output -raw aks_resource_group)
+            echo "AKS_NAME=$AKS_NAME"
+            echo "AKS_RG=$AKS_RG"
+          }
+
+          # Helper: setea el contexto de kubectl contra el cluster actual
+          set_kubecontext() {
+            az aks get-credentials -g "$AKS_RG" -n "$AKS_NAME" --overwrite-existing
+            kubectl cluster-info
+          }
+
+          install_ingress_nginx() {
+            echo ">> Installing ingress-nginx"
+            helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx --force-update
+            if [[ -n "${INGRESS_NGINX_CHART_VERSION}" ]]; then
+              VER="--version ${INGRESS_NGINX_CHART_VERSION}"
+            else
+              VER=""
+            fi
+
+            # Clase "nginx" y Service tipo LoadBalancer (AKS)
+            helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+              --namespace ingress-nginx --create-namespace ${VER} \
+              --set controller.ingressClassResource.name=nginx \
+              --set controller.ingressClass=nginx \
+              --set controller.replicaCount=1 \
+              --set controller.nodeSelector."kubernetes\\.io/os"=linux \
+              --set defaultBackend.nodeSelector."kubernetes\\.io/os"=linux
+
+            # Espera a que el Service obtenga IP pública
+            echo ">> Waiting for ingress-nginx LoadBalancer IP..."
+            kubectl -n ingress-nginx wait --for=condition=available deploy/ingress-nginx-controller --timeout=300s
+            LB_IP=""
+            for i in {1..30}; do
+              LB_IP=$(kubectl -n ingress-nginx get svc ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
+              [[ -n "$LB_IP" ]] && break
+              sleep 10
+            done
+            echo "Ingress LB IP: ${LB_IP:-pending}"
+          }
+
+          install_external_dns() {
+            echo ">> Installing ExternalDNS (Azure DNS)"
+            helm repo add bitnami https://charts.bitnami.com/bitnami --force-update
+            if [[ -n "${EXTERNALDNS_CHART_VERSION}" ]]; then
+              VER="--version ${EXTERNALDNS_CHART_VERSION}"
+            else
+              VER=""
+            fi
+
+            # NOTAS:
+            # - provider=azure
+            # - registry=txt y txtOwnerId para evitar colisiones
+            # - sources: ingress y service
+            # - domainFilters: limita a tu zona
+            # - azure.*: RG y subs/tenant; credenciales por env vars
+            # - Necesita rol "DNS Zone Contributor" sobre el RG/zonas
+            helm upgrade --install external-dns bitnami/external-dns \
+              --namespace external-dns --create-namespace ${VER} \
+              --set provider=azure \
+              --set policy=sync \
+              --set registry=txt \
+              --set "txtOwnerId=${AKS_NAME}" \
+              --set "sources={ingress,service}" \
+              --set "domainFilters={${{ secrets.AZURE_DNS_ZONE }}}" \
+              --set interval=1m \
+              --set azure.subscriptionId=${{ secrets.AZURE_SUBSCRIPTION_ID }} \
+              --set azure.tenantId=${{ secrets.AZURE_TENANT_ID }} \
+              --set azure.resourceGroup="${{ secrets.BACKEND_RG }}" \
+              --set azure.useManagedIdentity=false \
+              --set rbac.create=true \
+              --set serviceAccount.create=true \
+              --set "extraEnvVars[0].name=AZURE_CLIENT_ID" \
+              --set "extraEnvVars[0].value=${{ secrets.AZURE_CLIENT_ID }}" \
+              --set "extraEnvVars[1].name=AZURE_CLIENT_SECRET" \
+              --set "extraEnvVars[1].value=${{ secrets.AZURE_CLIENT_SECRET }}"
+
+            kubectl -n external-dns rollout status deploy/external-dns --timeout=180s || true
+          }
+
+          # Helper: instala cert-manager (CRDs + chart)
+          install_cert_manager() {
+            echo ">> Installing cert-manager ${CERT_MANAGER_VERSION}"
+            kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/${CERT_MANAGER_VERSION}/cert-manager.crds.yaml
+            helm repo add jetstack https://charts.jetstack.io --force-update
+            helm upgrade --install cert-manager jetstack/cert-manager \
+              --namespace cert-manager --create-namespace \
+              --version ${CERT_MANAGER_VERSION}
+          }
+
+          # Helper: instala/asegura Velero server con plugin de Azure apuntando a tu Storage
+          install_velero_server() {
+            echo ">> Installing/Ensuring Velero server"
+            velero install \
+              --provider azure \
+              --plugins ${VELERO_PLUGIN_AZURE} \
+              --bucket "${{ secrets.BACKEND_CONTAINER_VELERO }}" \
+              --secret-file ./credentials-velero \
+              --backup-location-config resourceGroup=${{ secrets.BACKEND_RG }},storageAccount=${{ secrets.BACKEND_STORAGE_ACCOUNT }} \
+              --use-restic \
+              --wait || true
+
+            # Espera a que esté listo
+            kubectl -n velero rollout status deploy/velero --timeout=180s || true
+          }
+
+          # Helper: formatea lista de namespaces para velero
+          IFS=',' read -ra NS_LIST <<< "${BACKUP_NAMESPACES}"
+          NS_ARGS=()
+          for ns in "${NS_LIST[@]}"; do
+            NS_ARGS+=(--include-namespaces "$ns")
+          done
+
+          if [[ "$ACTION" == "apply" ]]; then
+            echo "🚀 Terraform apply..."
+            terraform apply -auto-approve
+
+            echo "🔎 Reading Terraform outputs..."
+            get_tf_outputs
+
+            echo "🔐 Set kube context..."
+            set_kubecontext
+
+            echo "🧭 Install NGINX Ingress Controller..."
+            install_ingress_nginx
+
+            echo "🌐 Install ExternalDNS (Azure DNS)..."
+            install_external_dns
+
+            echo "📦 Install cert-manager..."
+            install_cert_manager
+
+            echo "💾 Ensure Velero installed..."
+            install_velero_server
+
+            echo "🔁 Try to restore latest Velero backup (if exists)..."
+            # Busca el último backup con el prefijo configurado
+            LATEST_BACKUP=$(velero backup get -o json | jq -r \
+              --arg pfx "${VELERO_BACKUP_PREFIX}" '.items | map(select(.metadata.name|startswith($pfx))) | sort_by(.status.startTimestamp) | last?.metadata.name // empty')
+
+            if [[ -n "$LATEST_BACKUP" ]]; then
+              echo "Found backup: $LATEST_BACKUP → restoring..."
+              velero restore create --from-backup "$LATEST_BACKUP" --wait || true
+            else
+              echo "No previous backups found with prefix '${VELERO_BACKUP_PREFIX}'. Skipping restore."
+            fi
+
+            echo "✅ Apply + (optional) Restore done."
+
+          elif [[ "$ACTION" == "destroy" ]]; then
+            echo "🔎 Reading Terraform outputs (cluster may still exist)..."
+            # Si el state existe, intenta sacar el nombre; si no, omite backup
+            if terraform output -json >/dev/null 2>&1; then
+              get_tf_outputs || true
+            fi
+
+            if [[ -n "${AKS_RG:-}" && -n "${AKS_NAME:-}" ]]; then
+              echo "🔐 Set kube context to existing cluster to run Velero backup..."
+              set_kubecontext || true
+
+              echo "💾 Ensure Velero installed (in case not yet)..."
+              install_velero_server || true
+
+              TS=$(date +%Y%m%d%H%M%S)
+              BACKUP_NAME="${VELERO_BACKUP_PREFIX}-${TS}"
+              echo "📸 Creating Velero backup: ${BACKUP_NAME}"
+              velero backup create "${BACKUP_NAME}" "${NS_ARGS[@]}" --wait || true
+            else
+              echo "⚠️ Could not resolve AKS name/RG from Terraform outputs. Skipping backup step."
+            fi
+
+            echo "💥 Terraform destroy..."
+            terraform destroy -auto-approve
+
+            echo "✅ Destroy (+ backup attempt) done."
+          else
+            echo "Unknown ACTION: $ACTION"
+            exit 1
+          fi

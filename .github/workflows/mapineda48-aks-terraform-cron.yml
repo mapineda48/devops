@@ -71,14 +71,6 @@ jobs:
       - name: Terraform Plan
         run: terraform plan
 
-      # Instala Velero CLI en el runner (para ejecutar velero backup/restore)
-      - name: Install Velero CLI
-        run: |
-          curl -sSL https://github.com/vmware-tanzu/velero/releases/download/v1.16.2/velero-v1.16.2-linux-amd64.tar.gz -o /tmp/velero.tgz
-          tar -xzf /tmp/velero.tgz -C /tmp
-          sudo mv /tmp/velero-v1.16.2-linux-amd64/velero /usr/local/bin/velero
-          velero version
-
       # Crea archivo de credenciales para el plugin de Azure (lo usará el server de Velero)
       - name: Prepare Velero credentials file
         run: |
@@ -211,6 +203,12 @@ jobs:
 
           # Helper: instala/asegura Velero server con plugin de Azure apuntando a tu Storage
           install_velero_server() {
+            echo ">> Installing Velero CLI"
+            curl -sSL https://github.com/vmware-tanzu/velero/releases/download/v1.16.2/velero-v1.16.2-linux-amd64.tar.gz -o /tmp/velero.tgz
+            tar -xzf /tmp/velero.tgz -C /tmp
+            sudo mv /tmp/velero-v1.16.2-linux-amd64/velero /usr/local/bin/velero
+            velero version
+
             echo ">> Installing/Ensuring Velero server"
             velero install \
               --provider azure \

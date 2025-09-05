@@ -18,6 +18,8 @@ on:
 
 jobs:
   terraform:
+    # Solo corre cuando se dispara manualmente
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     defaults:
       run:

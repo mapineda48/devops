@@ -250,7 +250,7 @@ jobs:
             install_cert_manager
 
             echo "💾 Ensure Velero installed..."
-            install_velero_server
+            # install_velero_server
 
             echo "🔁 Try to restore latest Velero backup (if exists)..."
             # Busca el último backup con el prefijo configurado
@@ -278,7 +278,7 @@ jobs:
               set_kubecontext || true
 
               echo "💾 Ensure Velero installed (in case not yet)..."
-              install_velero_server || true
+              # install_velero_server || true
 
               TS=$(date +%Y%m%d%H%M%S)
               BACKUP_NAME="${VELERO_BACKUP_PREFIX}-${TS}"

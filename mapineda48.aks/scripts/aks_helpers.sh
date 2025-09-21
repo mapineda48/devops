@@ -37,26 +37,47 @@ install_ingress_nginx() {
 install_external_dns() {
   log "Installing external-dns (official chart)"
   helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/ --force-update
+
   local verArgs=()
   [[ -n "${EXTERNALDNS_CHART_VERSION:-}" ]] && verArgs+=(--version "$EXTERNALDNS_CHART_VERSION")
 
-  # Elige auth por secreto (rápido) o Workload Identity (recomendado).
+  # Auth por Workload Identity (recomendado) o por Client Secret (rápido).
   local authArgs=()
   if [[ "${USE_WORKLOAD_IDENTITY:-false}" == "true" ]]; then
+    : "${AKS_WORKLOAD_CLIENT_ID:?missing}"
+    : "${AZURE_SUBSCRIPTION_ID:?missing}"
+    : "${AZURE_TENANT_ID:?missing}"
+    : "${BACKEND_RG:?missing}"
+
     authArgs+=(
       --set azure.useWorkloadIdentityAuth=true
-      --set serviceAccount.annotations."azure\.workload\.identity/client-id"="${AKS_WORKLOAD_CLIENT_ID:?missing}"
+      --set azure.subscriptionId="${AZURE_SUBSCRIPTION_ID}"
+      --set azure.tenantId="${AZURE_TENANT_ID}"
+      --set azure.resourceGroup="${BACKEND_RG}"
+      --set serviceAccount.annotations."azure\.workload\.identity/client-id"="${AKS_WORKLOAD_CLIENT_ID}"
     )
   else
+    : "${AZURE_SUBSCRIPTION_ID:?missing}"
+    : "${AZURE_TENANT_ID:?missing}"
+    : "${AZURE_CLIENT_ID:?missing}"
+    : "${AZURE_CLIENT_SECRET:?missing}"
+    : "${BACKEND_RG:?missing}"
+
+    # Sin WI: pasamos credenciales por variables de entorno (extraEnv)
     authArgs+=(
       --set azure.useWorkloadIdentityAuth=false
-      --set env[0].name=AZURE_SUBSCRIPTION_ID --set env[0].value="${AZURE_SUBSCRIPTION_ID:?missing}"
-      --set env[1].name=AZURE_TENANT_ID       --set env[1].value="${AZURE_TENANT_ID:?missing}"
-      --set env[2].name=AZURE_CLIENT_ID       --set env[2].value="${AZURE_CLIENT_ID:?missing}"
-      --set env[3].name=AZURE_CLIENT_SECRET   --set env[3].value="${AZURE_CLIENT_SECRET:?missing}"
-      --set azure.resourceGroup="${BACKEND_RG:?missing}"
+      --set azure.subscriptionId="${AZURE_SUBSCRIPTION_ID}"
+      --set azure.tenantId="${AZURE_TENANT_ID}"
+      --set azure.resourceGroup="${BACKEND_RG}"
+      --set extraEnv[0].name=AZURE_SUBSCRIPTION_ID --set extraEnv[0].value="${AZURE_SUBSCRIPTION_ID}"
+      --set extraEnv[1].name=AZURE_TENANT_ID       --set extraEnv[1].value="${AZURE_TENANT_ID}"
+      --set extraEnv[2].name=AZURE_CLIENT_ID       --set extraEnv[2].value="${AZURE_CLIENT_ID}"
+      --set extraEnv[3].name=AZURE_CLIENT_SECRET   --set extraEnv[3].value="${AZURE_CLIENT_SECRET}"
     )
   fi
+
+  : "${AKS_NAME:?missing}"
+  : "${AZURE_DNS_ZONE:?missing}"
 
   helm upgrade --install external-dns external-dns/external-dns \
     --namespace external-dns --create-namespace "${verArgs[@]}" \
@@ -65,7 +86,7 @@ install_external_dns() {
     --set registry=txt \
     --set "txtOwnerId=${AKS_NAME}" \
     --set "sources={ingress,service}" \
-    --set "domainFilters={${AZURE_DNS_ZONE:?missing}}" \
+    --set "domainFilters={${AZURE_DNS_ZONE}}" \
     --set interval=1m \
     --set resources.requests.cpu="100m" \
     --set resources.requests.memory="128Mi" \
@@ -75,6 +96,7 @@ install_external_dns() {
 
   kubectl -n external-dns rollout status deploy/external-dns --timeout=180s || true
 }
+
 
 install_cert_manager() {
   log "Installing cert-manager ${CERT_MANAGER_VERSION:?missing}"

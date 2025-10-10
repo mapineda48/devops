@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-set -euo pipefail
 
 # Activa -x solo si exportas DEBUG=1 (para no filtrar secretos por error)
 [[ "${DEBUG:-}" == "1" ]] && set -x

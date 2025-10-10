@@ -27,3 +27,5 @@ notes.txt
 
 # Archivos de salida o temporales
 *.out
+
+scripts/.env

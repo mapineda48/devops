@@ -11,7 +11,7 @@ on:
         required: false
         default: 'auto'
         type: choice
-        options: [auto, apply, destroy]
+        options: [auto, main_apply, main_destroy]
 
 # 👇 IMPORTANTE: permisos para OIDC
 permissions:

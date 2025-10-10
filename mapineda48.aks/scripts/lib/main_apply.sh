@@ -6,17 +6,17 @@ main_apply() {
     terraform apply -auto-approve
 
     log "Reading TF outputs..."
-    get_tf_outputs
+    tf_get_outputs
 
     log "Set kube context..."
-    set_kubecontext
+    az_set_kubecontext
 
     log "Install ingress-nginx..."
-    install_ingress_nginx
+    aks_install_ingress_nginx
 
     log "Install external-dns..."
-    install_external_dns
+    aks_install_external_dns
 
     log "Install cert-manager..."
-    install_cert_manager
+    aks_install_cert_manager
 }

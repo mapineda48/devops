@@ -8,15 +8,6 @@ for f in "$(dirname "$0")"/lib/*.sh; do
 done
 
 
-# 2️⃣ Validar argumento (nombre de la función)
-if [ $# -lt 1 ]; then
-  echo "Uso: $0 <nombre_función> [args...]" >&2
-  exit 1
-fi
-
-FUNC_NAME="$1"
-shift # remover el primer argumento (nombre de la función)
-
 
 ACTION="${ACTION:-auto}"
 
@@ -36,10 +27,10 @@ fi
 log "Resolved ACTION: $ACTION"
 
 # 3️⃣ Ejecutar la función si existe
-if declare -F "$FUNC_NAME" >/dev/null; then
-  "$FUNC_NAME" "$@"  # pasa el resto de argumentos
+if declare -F "$ACTION" >/dev/null; then
+  "$ACTION" "$@"  # pasa el resto de argumentos
 else
-  echo "❌ La función '$FUNC_NAME' no existe." >&2
+  echo "❌ La función '$ACTION' no existe." >&2
   exit 1
 fi
 

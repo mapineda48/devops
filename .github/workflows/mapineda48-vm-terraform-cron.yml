@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./mapineda48.vm  
+        working-directory: ./azure/vm  
 
     steps:
       - name: Checkout repository

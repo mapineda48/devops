@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./mapineda48.aks
+        working-directory: ./azure/aks
     env:
       CERT_MANAGER_VERSION: v1.18.2
       VELERO_VERSION: v1.16.2

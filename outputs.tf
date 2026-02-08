@@ -30,12 +30,12 @@ output "storage_account_primary_access_key" {
 }
 
 output "container_name" {
-  description = "Name of the blob container"
+  description = "Name of the data blob container"
   value       = azurerm_storage_container.main.name
 }
 
 output "public_container_name" {
-  description = "Name of the public blob container (accessible only via CDN)"
+  description = "Name of the public blob container (private access - use SAS tokens)"
   value       = azurerm_storage_container.public.name
 }
 
@@ -57,25 +57,4 @@ output "dns_zone_name_servers" {
 output "dns_www_fqdn" {
   description = "FQDN of the www CNAME record (if created)"
   value       = var.dns_zone_name != null && var.dns_www_target != null ? azurerm_dns_cname_record.www[0].fqdn : null
-}
-
-output "cdn_frontdoor_profile_id" {
-  description = "ID of the Azure Front Door profile (if created)"
-  value       = var.dns_zone_name != null ? azurerm_cdn_frontdoor_profile.main[0].id : null
-}
-
-output "cdn_endpoint_url" {
-  description = "Default Azure Front Door endpoint URL (if created)"
-  value       = var.dns_zone_name != null ? "https://${azurerm_cdn_frontdoor_endpoint.main[0].host_name}" : null
-}
-
-output "cdn_custom_domain_url" {
-  description = "Custom domain CDN URL (if created)"
-  value       = var.dns_zone_name != null ? "https://cdn.${var.dns_zone_name}" : null
-}
-
-output "cdn_custom_domain_validation_token" {
-  description = "Validation token for custom domain (if created)"
-  value       = var.dns_zone_name != null ? azurerm_cdn_frontdoor_custom_domain.cdn[0].validation_token : null
-  sensitive   = true
 }

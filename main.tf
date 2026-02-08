@@ -81,30 +81,6 @@ resource "azurerm_storage_container" "public" {
 }
 
 # -----------------------------------------------------------------------------
-# DNS Zone (optional - only created if dns_zone_name is provided)
-# -----------------------------------------------------------------------------
-resource "azurerm_dns_zone" "main" {
-  count               = var.dns_zone_name != null ? 1 : 0
-  name                = var.dns_zone_name
-  resource_group_name = azurerm_resource_group.main.name
-  tags                = var.tags
-}
-
-# -----------------------------------------------------------------------------
-# DNS CNAME Record for www subdomain (optional)
-# Points to external site like GitHub Pages
-# -----------------------------------------------------------------------------
-resource "azurerm_dns_cname_record" "www" {
-  count               = var.dns_zone_name != null && var.dns_www_target != null ? 1 : 0
-  name                = "www"
-  zone_name           = azurerm_dns_zone.main[0].name
-  resource_group_name = azurerm_resource_group.main.name
-  ttl                 = 3600
-  record              = var.dns_www_target
-  tags                = var.tags
-}
-
-# -----------------------------------------------------------------------------
 # Cloudflare DNS Zone (optional - only created if cloudflare_zone_name is provided)
 # -----------------------------------------------------------------------------
 resource "cloudflare_zone" "main" {

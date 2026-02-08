@@ -1,6 +1,43 @@
-# Azure Storage Account - Terraform
+# Infraestructura Terraform - Azure
 
-Este repositorio contiene la infraestructura como código (IaC) para desplegar recursos en Azure utilizando Terraform.
+Este proyecto define la infraestructura para el entorno `mapineda48.de` en Azure utilizando Terraform.
+
+---
+
+## 📦 Backend remoto en Azure Blob Storage
+
+Este proyecto utiliza un backend remoto para almacenar el estado de Terraform en un contenedor de Azure Blob Storage.
+
+> ⚠️ **Importante:** Los valores sensibles del backend (grupo de recursos, cuenta de almacenamiento, contenedor, etc.) **NO deben estar en los archivos `.tf`**. En su lugar, se configuran mediante un archivo externo `backend.hcl`, el cual debe ser ignorado por Git.
+
+---
+
+## 🚀 Pasos de uso
+
+### 1. Crear tu archivo `backend.hcl`
+
+Crea un archivo llamado `backend.hcl` en la raíz del proyecto (no se debe subir al repositorio). Ejemplo:
+
+```hcl
+resource_group_name  = "prueba-rg"
+storage_account_name = "prueba"
+container_name       = "prueba"
+key                  = "prueba.tfstate"
+```
+
+### 2. Inicializar Terraform
+
+Ejecuta el siguiente comando para inicializar Terraform con el backend remoto:
+
+```bash
+terraform init -backend-config=backend.hcl
+```
+
+Este comando solo es necesario:
+
+- La primera vez que usas el proyecto
+- Si cambia el archivo `backend.hcl`
+- Si cambias el backend o proveedor
 
 ## 📁 Estructura del Proyecto
 

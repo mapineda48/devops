@@ -11,4 +11,8 @@ terraform {
       version = "~> 3.0"
     }
   }
+
+  backend "azurerm" {
+    # Configuration loaded from backend.hcl
+  }
 }

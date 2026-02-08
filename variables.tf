@@ -22,6 +22,18 @@ variable "storage_account_replication_type" {
   default     = "LRS"
 }
 
+variable "dns_zone_name" {
+  description = "Name of the DNS zone"
+  type        = string
+  default     = null
+}
+
+variable "dns_www_target" {
+  description = "Target CNAME for www subdomain (e.g., username.github.io)"
+  type        = string
+  default     = null
+}
+
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)

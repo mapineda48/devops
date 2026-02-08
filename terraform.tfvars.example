@@ -5,7 +5,11 @@ location                         = "East US"
 resource_group_name              = "rg-storage-demo"
 storage_account_tier             = "Standard"
 storage_account_replication_type = "LRS"
-container_name                   = "data"
+
+# Optional: DNS Zone Configuration
+# Uncomment and configure if you want to manage a DNS zone
+# dns_zone_name   = "example.com"
+# dns_www_target  = "username.github.io"
 
 tags = {
   Environment = "Development"

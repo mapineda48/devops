@@ -25,13 +25,13 @@ variable "storage_account_replication_type" {
 variable "dns_zone_name" {
   description = "Name of the DNS zone"
   type        = string
-  default     = null
+  default     = "mapineda48.de"
 }
 
 variable "dns_www_target" {
   description = "Target CNAME for www subdomain (e.g., username.github.io)"
   type        = string
-  default     = null
+  default     = "mapineda48.github.io"
 }
 
 variable "tags" {

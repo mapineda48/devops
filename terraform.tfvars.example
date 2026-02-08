@@ -1,0 +1,14 @@
+# Example terraform.tfvars file
+# Copy this file to terraform.tfvars and modify the values as needed
+
+location                         = "East US"
+resource_group_name              = "rg-storage-demo"
+storage_account_tier             = "Standard"
+storage_account_replication_type = "LRS"
+container_name                   = "data"
+
+tags = {
+  Environment = "Development"
+  ManagedBy   = "Terraform"
+  Project     = "DevOps Demo"
+}

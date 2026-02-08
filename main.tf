@@ -143,6 +143,9 @@ resource "azurerm_cdn_frontdoor_route" "main" {
   cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.main[0].id
   cdn_frontdoor_origin_ids      = [azurerm_cdn_frontdoor_origin.main[0].id]
 
+  # Link the route to the custom domain
+  cdn_frontdoor_custom_domain_ids = [azurerm_cdn_frontdoor_custom_domain.cdn[0].id]
+
   supported_protocols    = ["Http", "Https"]
   patterns_to_match      = ["/*"]
   forwarding_protocol    = "HttpsOnly"

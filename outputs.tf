@@ -59,3 +59,18 @@ output "cloudflare_zone_status" {
   description = "Cloudflare zone status (if created)"
   value       = var.cloudflare_zone_name != null ? cloudflare_zone.main[0].status : null
 }
+
+output "cloudflare_cdn_url" {
+  description = "Cloudflare CDN URL for Azure Blob Storage (if created)"
+  value       = var.cloudflare_zone_name != null ? "https://cdn.${var.cloudflare_zone_name}" : null
+}
+
+output "cloudflare_worker_name" {
+  description = "Cloudflare Worker script name (if created)"
+  value       = var.cloudflare_zone_name != null ? cloudflare_workers_script.sas_gateway[0].script_name : null
+}
+
+output "cdn_example_url" {
+  description = "Example URL to test CDN access to public container"
+  value       = var.cloudflare_zone_name != null ? "https://cdn.${var.cloudflare_zone_name}/public/<blob-name>" : null
+}

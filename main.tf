@@ -103,3 +103,16 @@ resource "cloudflare_dns_record" "www" {
   proxied = false
   comment = "Managed by Terraform - points to external site"
 }
+
+# CNAME record for CDN subdomain pointing to Azure Blob Storage
+# Cloudflare will act as CDN/proxy for the storage account
+resource "cloudflare_dns_record" "cdn" {
+  count   = var.cloudflare_zone_name != null ? 1 : 0
+  zone_id = cloudflare_zone.main[0].id
+  name    = "cdn"
+  type    = "CNAME"
+  content = azurerm_storage_account.main.primary_blob_host
+  ttl     = 1 # TTL of 1 = Automatic when proxied
+  proxied = true
+  comment = "Managed by Terraform - CDN for Azure Blob Storage"
+}

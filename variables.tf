@@ -48,6 +48,25 @@ variable "cloudflare_zone_name" {
   default     = null
 }
 
+# Cloudflare Worker settings
+variable "worker_sas_ttl_seconds" {
+  description = "SAS token TTL in seconds (how long the token is valid)"
+  type        = number
+  default     = 120
+}
+
+variable "worker_edge_ttl_seconds" {
+  description = "Edge cache TTL in seconds (how long Cloudflare caches the blob)"
+  type        = number
+  default     = 86400
+}
+
+variable "worker_browser_ttl_seconds" {
+  description = "Browser cache TTL in seconds (Cache-Control max-age)"
+  type        = number
+  default     = 3600
+}
+
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)

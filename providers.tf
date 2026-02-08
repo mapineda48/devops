@@ -7,3 +7,12 @@ provider "azurerm" {
 }
 
 provider "random" {}
+
+# Cloudflare provider configuration
+# Best practice: use CLOUDFLARE_API_TOKEN environment variable
+# Create token at: https://dash.cloudflare.com/profile/api-tokens
+provider "cloudflare" {
+  # api_token is set via CLOUDFLARE_API_TOKEN env variable
+  # Alternatively, uncomment below and use a variable:
+  # api_token = var.cloudflare_api_token
+}

@@ -34,6 +34,20 @@ variable "dns_www_target" {
   default     = "mapineda48.github.io"
 }
 
+# Cloudflare variables
+variable "cloudflare_account_id" {
+  description = "Cloudflare Account ID (find it in Cloudflare dashboard)"
+  type        = string
+  default     = null
+  sensitive   = true
+}
+
+variable "cloudflare_zone_name" {
+  description = "Domain name to manage in Cloudflare (e.g., example.com)"
+  type        = string
+  default     = null
+}
+
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)

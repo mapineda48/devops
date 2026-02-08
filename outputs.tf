@@ -58,3 +58,24 @@ output "dns_www_fqdn" {
   description = "FQDN of the www CNAME record (if created)"
   value       = var.dns_zone_name != null && var.dns_www_target != null ? azurerm_dns_cname_record.www[0].fqdn : null
 }
+
+# Cloudflare Outputs
+output "cloudflare_zone_id" {
+  description = "Cloudflare Zone ID (if created)"
+  value       = var.cloudflare_zone_name != null ? cloudflare_zone.main[0].id : null
+}
+
+output "cloudflare_zone_name" {
+  description = "Cloudflare Zone Name (if created)"
+  value       = var.cloudflare_zone_name != null ? cloudflare_zone.main[0].name : null
+}
+
+output "cloudflare_zone_name_servers" {
+  description = "Cloudflare name servers for zone (if created)"
+  value       = var.cloudflare_zone_name != null ? cloudflare_zone.main[0].name_servers : null
+}
+
+output "cloudflare_zone_status" {
+  description = "Cloudflare zone status (if created)"
+  value       = var.cloudflare_zone_name != null ? cloudflare_zone.main[0].status : null
+}

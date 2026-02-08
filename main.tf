@@ -103,3 +103,27 @@ resource "azurerm_dns_cname_record" "www" {
   record              = var.dns_www_target
   tags                = var.tags
 }
+
+# -----------------------------------------------------------------------------
+# Cloudflare DNS Zone (optional - only created if cloudflare_zone_name is provided)
+# -----------------------------------------------------------------------------
+resource "cloudflare_zone" "main" {
+  count = var.cloudflare_zone_name != null ? 1 : 0
+  account = {
+    id = var.cloudflare_account_id
+  }
+  name = var.cloudflare_zone_name
+  type = "full"
+}
+
+# CNAME record for www subdomain in Cloudflare
+resource "cloudflare_dns_record" "www" {
+  count   = var.cloudflare_zone_name != null && var.dns_www_target != null ? 1 : 0
+  zone_id = cloudflare_zone.main[0].id
+  name    = "www"
+  type    = "CNAME"
+  content = var.dns_www_target
+  ttl     = 3600
+  proxied = false
+  comment = "Managed by Terraform - points to external site"
+}

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>403 | Access Restricted</title>
+  <style>
+    :root {
+      --bg-1: #0b1220;
+      --bg-2: #121c34;
+      --card: rgba(10, 17, 31, 0.74);
+      --line: rgba(126, 184, 255, 0.28);
+      --text: #e8f1ff;
+      --muted: #b9c8e8;
+      --accent: #7ed0ff;
+      --accent-2: #79f2c6;
+      --shadow: 0 22px 56px rgba(3, 10, 24, 0.52);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; }
+    body {
+      font-family: "Trebuchet MS", "Segoe UI", "Gill Sans", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(75rem 45rem at 8% 8%, rgba(126, 208, 255, 0.16), transparent 58%),
+        radial-gradient(70rem 40rem at 92% 100%, rgba(121, 242, 198, 0.14), transparent 60%),
+        linear-gradient(145deg, var(--bg-1), var(--bg-2));
+      display: grid;
+      place-items: center;
+      padding: 2rem;
+      overflow: hidden;
+    }
+    .card {
+      width: min(42rem, 100%);
+      border: 1px solid var(--line);
+      border-radius: 1.25rem;
+      padding: 2rem;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      opacity: 0;
+      transform: translateY(8px);
+      animation: rise 650ms ease forwards;
+    }
+    .badge {
+      display: inline-block;
+      color: var(--accent-2);
+      background: rgba(121, 242, 198, 0.08);
+      border: 1px solid rgba(121, 242, 198, 0.45);
+      border-radius: 999px;
+      padding: 0.3rem 0.75rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 1rem;
+    }
+    h1 { font-size: clamp(1.8rem, 3vw, 2.6rem); margin-bottom: 0.7rem; }
+    p { color: var(--muted); line-height: 1.6; font-size: 1.02rem; }
+    .status { margin-top: 1.25rem; color: var(--accent); font-weight: 700; font-size: 0.84rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 640px) { .card { padding: 1.2rem; } p { font-size: 0.96rem; } }
+  </style>
+</head>
+<body>
+  <main class="card" role="main" aria-labelledby="title">
+    <span class="badge">Protected Route</span>
+    <h1 id="title">403 - Access Restricted</h1>
+    <p>You reached a storage route that is intentionally blocked by policy. This gateway only serves approved public resources.</p>
+    <p class="status">Policy enforcement active</p>
+  </main>
+</body>
+</html>

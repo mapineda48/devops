@@ -67,6 +67,36 @@ variable "worker_browser_ttl_seconds" {
   default     = 3600
 }
 
+variable "worker_forbidden_html_file" {
+  description = "Path to the custom 403 HTML file used by the Cloudflare Worker"
+  type        = string
+  default     = "www/forbidden.html"
+}
+
+variable "worker_bad_request_html_file" {
+  description = "Path to the custom 400 HTML file used by the Cloudflare Worker"
+  type        = string
+  default     = "www/bad-request.html"
+}
+
+variable "worker_missing_config_html_file" {
+  description = "Path to the custom missing-config HTML file used by the Cloudflare Worker"
+  type        = string
+  default     = "www/missing-config.html"
+}
+
+variable "worker_origin_fallback_html_file" {
+  description = "Path to the custom origin fallback HTML file used by the Cloudflare Worker"
+  type        = string
+  default     = "www/origin-fallback.html"
+}
+
+variable "worker_internal_error_html_file" {
+  description = "Path to the custom internal error HTML file used by the Cloudflare Worker"
+  type        = string
+  default     = "www/internal-error.html"
+}
+
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)

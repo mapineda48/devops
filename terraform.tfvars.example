@@ -11,6 +11,13 @@ storage_account_replication_type = "LRS"
 # dns_zone_name   = "example.com"
 # dns_www_target  = "username.github.io"
 
+# Optional: custom HTML templates used by the Worker
+# worker_bad_request_html_file    = "www/bad-request.html"
+# worker_forbidden_html_file      = "www/forbidden.html"
+# worker_missing_config_html_file = "www/missing-config.html"
+# worker_origin_fallback_html_file = "www/origin-fallback.html"
+# worker_internal_error_html_file = "www/internal-error.html"
+
 tags = {
   Environment = "Development"
   ManagedBy   = "Terraform"

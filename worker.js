@@ -10,6 +10,12 @@
 // Allowed containers (whitelist to prevent open proxy)
 const ALLOWED_CONTAINERS = ['public'];
 
+// Cache negative responses briefly to reduce repetitive origin hits.
+const NEGATIVE_CACHE_TTL_SECONDS = 60;
+
+// Reuse imported HMAC keys across requests in the same isolate.
+const HMAC_KEY_CACHE = new Map();
+
 // Blocked container patterns (explicit deny - takes precedence over whitelist)
 const BLOCKED_PATTERNS = [
   /^data-/i,     // Block all containers starting with 'data-' (private data containers)
@@ -23,6 +29,12 @@ const BLOCKED_PATTERNS = [
 // - AZ_SAS_TTL_SECONDS: SAS token TTL (default 120)
 // - AZ_EDGE_TTL_SECONDS: Edge cache TTL (default 86400)
 // - AZ_BROWSER_TTL_SECONDS: Browser cache TTL (default 3600)
+// - AZ_ORIGIN_TIMEOUT_MS: Origin fetch timeout in ms (default 10000)
+// - AZ_BAD_REQUEST_HTML: Custom HTML page for 400 responses
+// - AZ_FORBIDDEN_HTML: Custom HTML page for 403 responses
+// - AZ_MISSING_CONFIG_HTML: Custom HTML page for missing configuration
+// - AZ_ORIGIN_FALLBACK_HTML: Custom HTML page for origin errors without status text
+// - AZ_INTERNAL_ERROR_HTML: Custom HTML page for 500 responses
 
 export default {
   async fetch(request, env, ctx) {
@@ -38,7 +50,7 @@ export default {
     const pathParts = path.split('/').filter(p => p.length > 0);
     
     if (pathParts.length < 2) {
-      return new Response('Bad Request: Path must be /<container>/<blob>', { status: 400 });
+      return badRequestResponse(request, env);
     }
 
     const container = pathParts[0];
@@ -48,14 +60,14 @@ export default {
     for (const pattern of BLOCKED_PATTERNS) {
       if (pattern.test(container)) {
         console.error(`Blocked access attempt to forbidden container: ${container}`);
-        return new Response('Forbidden', { status: 403 });
+        return forbiddenResponse(request, env);
       }
     }
 
     // Security check 2: Whitelist validation (only explicitly allowed containers)
     if (!ALLOWED_CONTAINERS.includes(container)) {
       console.warn(`Access denied to non-whitelisted container: ${container}`);
-      return new Response('Forbidden', { status: 403 });
+      return forbiddenResponse(request, env);
     }
 
     // Get environment variables
@@ -64,9 +76,10 @@ export default {
     const sasTtl = parseInt(env.AZ_SAS_TTL_SECONDS || '120', 10);
     const edgeTtl = parseInt(env.AZ_EDGE_TTL_SECONDS || '86400', 10);
     const browserTtl = parseInt(env.AZ_BROWSER_TTL_SECONDS || '3600', 10);
+    const originTimeoutMs = parseInt(env.AZ_ORIGIN_TIMEOUT_MS || '10000', 10);
 
     if (!storageAccount || !storageKeyB64) {
-      return new Response('Internal Server Error: Missing storage configuration', { status: 500 });
+      return missingConfigResponse(request, env);
     }
 
     // Create cache key URL (without query string - important!)
@@ -74,8 +87,7 @@ export default {
     const cacheKeyUrl = new URL(request.url);
     cacheKeyUrl.search = ''; // Remove any query string from incoming request
     const cacheKey = new Request(cacheKeyUrl.toString(), {
-      method: 'GET',
-      headers: request.headers
+      method: 'GET'
     });
 
     // Try to get from Cloudflare cache first
@@ -86,7 +98,10 @@ export default {
       // Cache HIT - return cached response with indicator
       const cachedHeaders = new Headers(response.headers);
       cachedHeaders.set('X-Cache-Status', 'HIT');
-      return new Response(response.body, {
+
+      // HEAD responses must not include a body.
+      const responseBody = request.method === 'HEAD' ? null : response.body;
+      return new Response(responseBody, {
         status: response.status,
         statusText: response.statusText,
         headers: cachedHeaders
@@ -105,33 +120,100 @@ export default {
       );
 
       // Build origin URL with SAS
-      const originUrl = `https://${storageAccount}.blob.core.windows.net/${container}/${blobPath}?${sasToken}`;
+      const encodedBlobPath = blobPath
+        .split('/')
+        .map(segment => encodeURIComponent(segment))
+        .join('/');
+      const originUrl = `https://${storageAccount}.blob.core.windows.net/${container}/${encodedBlobPath}?${sasToken}`;
 
-      // Fetch from Azure Blob Storage
-      const originResponse = await fetch(originUrl, {
-        method: request.method,
-        headers: {
-          'Accept': request.headers.get('Accept') || '*/*',
-          'Accept-Encoding': request.headers.get('Accept-Encoding') || 'gzip, deflate, br'
+      // Forward only relevant request headers.
+      const forwardedHeaders = new Headers();
+      const passthroughHeaders = [
+        'Accept',
+        'Range',
+        'If-Range',
+        'If-Modified-Since',
+        'If-Unmodified-Since',
+        'If-Match',
+        'If-None-Match'
+      ];
+      for (const headerName of passthroughHeaders) {
+        const headerValue = request.headers.get(headerName);
+        if (headerValue) {
+          forwardedHeaders.set(headerName, headerValue);
         }
-      });
-
-      if (!originResponse.ok) {
-        return new Response(originResponse.statusText, { status: originResponse.status });
       }
 
-      // Read the body as ArrayBuffer first (streams can only be read once)
-      const body = await originResponse.arrayBuffer();
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => abortController.abort(), originTimeoutMs);
+
+      // Fetch from Azure Blob Storage
+      let originResponse;
+      try {
+        originResponse = await fetch(originUrl, {
+          method: request.method,
+          headers: forwardedHeaders,
+          signal: abortController.signal
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      if (!originResponse.ok) {
+        const isCacheableNegative = originResponse.status === 403 || originResponse.status === 404;
+        const negativeHeaders = {
+          'Cache-Control': `public, max-age=${NEGATIVE_CACHE_TTL_SECONDS}, s-maxage=${NEGATIVE_CACHE_TTL_SECONDS}`,
+          'X-Cache-Status': 'MISS'
+        };
+        const negativeResponse = originResponse.statusText
+          ? new Response(originResponse.statusText, {
+              status: originResponse.status,
+              headers: negativeHeaders
+            })
+          : htmlResponse(
+              request,
+              originResponse.status,
+              env.AZ_ORIGIN_FALLBACK_HTML,
+              defaultOriginFallbackHtml(),
+              negativeHeaders
+            );
+
+        // Cache only GET negative responses to reduce repeated origin calls.
+        if (isCacheableNegative && request.method === 'GET') {
+          ctx.waitUntil(cache.put(cacheKey, negativeResponse.clone()));
+        }
+
+        // HEAD responses must not include a body.
+        if (request.method === 'HEAD') {
+          return new Response(null, {
+            status: negativeResponse.status,
+            statusText: negativeResponse.statusText,
+            headers: negativeResponse.headers
+          });
+        }
+
+        return negativeResponse;
+      }
 
       // Build cacheable response with proper headers
       const responseHeaders = new Headers();
       
       // Copy content-related headers from origin
       const contentType = originResponse.headers.get('Content-Type');
+      const contentEncoding = originResponse.headers.get('Content-Encoding');
+      const contentDisposition = originResponse.headers.get('Content-Disposition');
+      const contentRange = originResponse.headers.get('Content-Range');
+      const contentLength = originResponse.headers.get('Content-Length');
+      const acceptRanges = originResponse.headers.get('Accept-Ranges');
       const etag = originResponse.headers.get('ETag');
       const lastModified = originResponse.headers.get('Last-Modified');
       
       if (contentType) responseHeaders.set('Content-Type', contentType);
+      if (contentEncoding) responseHeaders.set('Content-Encoding', contentEncoding);
+      if (contentDisposition) responseHeaders.set('Content-Disposition', contentDisposition);
+      if (contentRange) responseHeaders.set('Content-Range', contentRange);
+      if (contentLength) responseHeaders.set('Content-Length', contentLength);
+      if (acceptRanges) responseHeaders.set('Accept-Ranges', acceptRanges);
       if (etag) responseHeaders.set('ETag', etag);
       if (lastModified) responseHeaders.set('Last-Modified', lastModified);
       
@@ -139,8 +221,9 @@ export default {
       responseHeaders.set('Cache-Control', `public, max-age=${browserTtl}, s-maxage=${edgeTtl}`);
       responseHeaders.set('X-Cache-Status', 'MISS');
       
-      // Create the response to cache (using ArrayBuffer, not stream)
-      response = new Response(body, {
+      // Create response preserving stream to avoid buffering large blobs in memory.
+      const responseBody = request.method === 'HEAD' ? null : originResponse.body;
+      response = new Response(responseBody, {
         status: originResponse.status,
         statusText: originResponse.statusText,
         headers: responseHeaders
@@ -148,12 +231,15 @@ export default {
 
       // Store in cache (non-blocking)
       // Clone the response because the body can only be read once
-      ctx.waitUntil(cache.put(cacheKey, response.clone()));
+      if (request.method === 'GET') {
+        ctx.waitUntil(cache.put(cacheKey, response.clone()));
+      }
 
       return response;
 
     } catch (error) {
-      return new Response(`Internal Server Error: ${error.message}`, { status: 500 });
+      console.error('Worker fetch error:', error);
+      return internalErrorResponse(request, env);
     }
   }
 };
@@ -163,10 +249,11 @@ export default {
  */
 async function generateBlobSAS(accountName, accountKeyB64, container, blobPath, ttlSeconds) {
   const now = new Date();
+  const start = new Date(now.getTime() - 2 * 60 * 1000);
   const expiry = new Date(now.getTime() + ttlSeconds * 1000);
 
   // Format dates for Azure SAS
-  const st = now.toISOString().slice(0, 19) + 'Z';
+  const st = start.toISOString().slice(0, 19) + 'Z';
   const se = expiry.toISOString().slice(0, 19) + 'Z';
 
   // SAS parameters
@@ -199,14 +286,7 @@ async function generateBlobSAS(accountName, accountKeyB64, container, blobPath, 
   ].join('\n');
 
   // Sign with HMAC-SHA256
-  const key = base64ToArrayBuffer(accountKeyB64);
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    key,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
+  const cryptoKey = await getOrCreateHmacKey(accountKeyB64);
 
   const encoder = new TextEncoder();
   const signature = await crypto.subtle.sign(
@@ -232,6 +312,27 @@ async function generateBlobSAS(accountName, accountKeyB64, container, blobPath, 
 }
 
 /**
+ * Reuse imported HMAC key inside the current isolate.
+ */
+async function getOrCreateHmacKey(accountKeyB64) {
+  if (HMAC_KEY_CACHE.has(accountKeyB64)) {
+    return HMAC_KEY_CACHE.get(accountKeyB64);
+  }
+
+  const key = base64ToArrayBuffer(accountKeyB64);
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    key,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  HMAC_KEY_CACHE.set(accountKeyB64, cryptoKey);
+  return cryptoKey;
+}
+
+/**
  * Convert base64 string to ArrayBuffer
  */
 function base64ToArrayBuffer(base64) {
@@ -253,4 +354,76 @@ function arrayBufferToBase64(buffer) {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
+}
+
+/**
+ * Return branded 400 HTML page.
+ */
+function badRequestResponse(request, env) {
+  return htmlResponse(
+    request,
+    400,
+    env.AZ_BAD_REQUEST_HTML,
+    '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Bad Request</title></head><body><h1>400 Bad Request</h1></body></html>',
+    { 'Cache-Control': 'no-store' }
+  );
+}
+
+/**
+ * Return branded 403 HTML page.
+ */
+function forbiddenResponse(request, env) {
+  return htmlResponse(
+    request,
+    403,
+    env.AZ_FORBIDDEN_HTML,
+    '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Forbidden</title></head><body><h1>403 Forbidden</h1></body></html>',
+    { 'Cache-Control': 'no-store' }
+  );
+}
+
+/**
+ * Return branded 500 page when worker configuration is missing.
+ */
+function missingConfigResponse(request, env) {
+  return htmlResponse(
+    request,
+    500,
+    env.AZ_MISSING_CONFIG_HTML,
+    '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Service Misconfigured</title></head><body><h1>500 Service Misconfigured</h1></body></html>',
+    { 'Cache-Control': 'no-store' }
+  );
+}
+
+/**
+ * Return branded generic 500 page.
+ */
+function internalErrorResponse(request, env) {
+  return htmlResponse(
+    request,
+    500,
+    env.AZ_INTERNAL_ERROR_HTML,
+    '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Internal Server Error</title></head><body><h1>500 Internal Server Error</h1></body></html>',
+    { 'Cache-Control': 'no-store' }
+  );
+}
+
+/**
+ * Build an HTML response honoring HEAD semantics.
+ */
+function htmlResponse(request, status, html, fallbackHtml, headers = {}) {
+  const responseHeaders = {
+    'Content-Type': 'text/html; charset=utf-8',
+    ...headers
+  };
+  const responseBody = request.method === 'HEAD' ? null : (html || fallbackHtml);
+
+  return new Response(responseBody, {
+    status,
+    headers: responseHeaders
+  });
+}
+
+function defaultOriginFallbackHtml() {
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Resource Unavailable</title></head><body><h1>Resource Unavailable</h1></body></html>';
 }

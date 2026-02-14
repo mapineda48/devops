@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Origin Response Unavailable</title>
+  <style>
+    :root {
+      --bg-1: #0b1220;
+      --bg-2: #121c34;
+      --card: rgba(10, 17, 31, 0.74);
+      --line: rgba(154, 170, 255, 0.34);
+      --text: #e8f1ff;
+      --muted: #b9c8e8;
+      --accent: #9aaaff;
+      --shadow: 0 22px 56px rgba(3, 10, 24, 0.52);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      font-family: "Trebuchet MS", "Segoe UI", "Gill Sans", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(72rem 45rem at 10% 10%, rgba(154, 170, 255, 0.16), transparent 58%),
+        radial-gradient(62rem 40rem at 92% 100%, rgba(121, 242, 198, 0.12), transparent 58%),
+        linear-gradient(145deg, var(--bg-1), var(--bg-2));
+      display: grid;
+      place-items: center;
+      padding: 2rem;
+    }
+    .card {
+      width: min(42rem, 100%);
+      border: 1px solid var(--line);
+      border-radius: 1.25rem;
+      padding: 2rem;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+    .badge {
+      display: inline-block;
+      margin-bottom: 1rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid rgba(154, 170, 255, 0.45);
+      color: #d8deff;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 700;
+      background: rgba(154, 170, 255, 0.08);
+    }
+    h1 { font-size: clamp(1.8rem, 3vw, 2.6rem); margin-bottom: 0.7rem; }
+    p { color: var(--muted); line-height: 1.6; font-size: 1.02rem; }
+    @media (max-width: 640px) { .card { padding: 1.2rem; } p { font-size: 0.96rem; } }
+  </style>
+</head>
+<body>
+  <main class="card" role="main" aria-labelledby="title">
+    <span class="badge">Origin Fallback</span>
+    <h1 id="title">Resource Unavailable</h1>
+    <p>The storage origin returned an incomplete error response. The gateway is showing a fallback page to keep the response readable and consistent.</p>
+  </main>
+</body>
+</html>

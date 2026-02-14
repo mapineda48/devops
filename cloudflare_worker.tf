@@ -38,6 +38,31 @@ resource "cloudflare_workers_script" "sas_gateway" {
       name = "AZ_BROWSER_TTL_SECONDS"
       text = tostring(var.worker_browser_ttl_seconds)
       type = "plain_text"
+    },
+    {
+      name = "AZ_BAD_REQUEST_HTML"
+      text = file("${path.module}/${var.worker_bad_request_html_file}")
+      type = "plain_text"
+    },
+    {
+      name = "AZ_FORBIDDEN_HTML"
+      text = file("${path.module}/${var.worker_forbidden_html_file}")
+      type = "plain_text"
+    },
+    {
+      name = "AZ_MISSING_CONFIG_HTML"
+      text = file("${path.module}/${var.worker_missing_config_html_file}")
+      type = "plain_text"
+    },
+    {
+      name = "AZ_ORIGIN_FALLBACK_HTML"
+      text = file("${path.module}/${var.worker_origin_fallback_html_file}")
+      type = "plain_text"
+    },
+    {
+      name = "AZ_INTERNAL_ERROR_HTML"
+      text = file("${path.module}/${var.worker_internal_error_html_file}")
+      type = "plain_text"
     }
   ]
 

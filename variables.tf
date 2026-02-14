@@ -97,6 +97,60 @@ variable "worker_internal_error_html_file" {
   default     = "www/internal-error.html"
 }
 
+# DigitalOcean variables
+variable "digitalocean_region" {
+  description = "DigitalOcean region for Droplet resources"
+  type        = string
+  default     = "fra1"
+}
+
+variable "digitalocean_image" {
+  description = "DigitalOcean image slug for the Droplet"
+  type        = string
+  default     = "ubuntu-24-04-x64"
+}
+
+variable "digitalocean_droplet_name" {
+  description = "Droplet name"
+  type        = string
+  default     = "digitalocean-mapineda48"
+}
+
+variable "digitalocean_droplet_size" {
+  description = "Droplet size slug"
+  type        = string
+  default     = "s-2vcpu-4gb"
+}
+
+variable "digitalocean_subdomain" {
+  description = "Subdomain for the Droplet A record"
+  type        = string
+  default     = "digitalocean"
+}
+
+variable "letsencrypt_email" {
+  description = "Email used by acme-companion to request Let's Encrypt certificates"
+  type        = string
+  default     = "a.pinedavegamiguel@gmail.com"
+}
+
+variable "digitalocean_ssh_key_name" {
+  description = "Name used in DigitalOcean for the uploaded SSH key"
+  type        = string
+  default     = "mapineda48-do"
+}
+
+variable "digitalocean_ssh_public_key_path" {
+  description = "Path to the SSH public key file that will be uploaded to DigitalOcean"
+  type        = string
+  default     = "~/.ssh/id_ed25519_digitalocean.pub"
+}
+
+variable "allowed_ssh_source_cidr" {
+  description = "CIDR allowed to connect via SSH (your public IP in /32 format)"
+  type        = string
+}
+
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)

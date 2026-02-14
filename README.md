@@ -76,6 +76,14 @@ All resources are configured following Azure security best practices.
 - [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) installed and configured
 - Active Azure subscription
 - Appropriate permissions to create resources in Azure
+- DigitalOcean API token exported as `DIGITALOCEAN_TOKEN`
+- Existing DNS zone `mapineda48.de` in Cloudflare
+
+For DigitalOcean SSH access, create a dedicated key pair (if it does not exist yet):
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_digitalocean -C "mapineda48@digitalocean" -N ""
+```
 
 ---
 

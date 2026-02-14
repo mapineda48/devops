@@ -1,0 +1,86 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - ca-certificates
+  - curl
+  - docker.io
+  - docker-compose-v2
+
+write_files:
+  - path: /opt/nginx-proxy-stack/docker-compose.yml
+    permissions: "0644"
+    owner: root:root
+    content: |
+      services:
+        nginx-proxy:
+          image: nginxproxy/nginx-proxy:latest
+          container_name: nginx-proxy
+          restart: always
+          ports:
+            - "80:80"
+            - "443:443"
+          volumes:
+            - certs:/etc/nginx/certs:ro
+            - vhost:/etc/nginx/vhost.d
+            - html:/usr/share/nginx/html
+            - /var/run/docker.sock:/tmp/docker.sock:ro
+
+        acme-companion:
+          image: nginxproxy/acme-companion:latest
+          container_name: nginx-proxy-acme
+          restart: always
+          depends_on:
+            - nginx-proxy
+          environment:
+            - NGINX_PROXY_CONTAINER=nginx-proxy
+            - DEFAULT_EMAIL=${letsencrypt_email}
+          volumes:
+            - certs:/etc/nginx/certs
+            - vhost:/etc/nginx/vhost.d
+            - html:/usr/share/nginx/html
+            - acme:/etc/acme.sh
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+
+        hello:
+          image: nginx:alpine
+          container_name: hello-nginx
+          restart: always
+          environment:
+            - VIRTUAL_HOST=${fqdn}
+            - LETSENCRYPT_HOST=${fqdn}
+            - LETSENCRYPT_EMAIL=${letsencrypt_email}
+          volumes:
+            - ./hello/index.html:/usr/share/nginx/html/index.html:ro
+
+      volumes:
+        certs:
+        vhost:
+        html:
+        acme:
+
+  - path: /opt/nginx-proxy-stack/hello/index.html
+    permissions: "0644"
+    owner: root:root
+    content: |
+      <!doctype html>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Hello from DigitalOcean</title>
+        <style>
+          body { font-family: sans-serif; margin: 2rem; }
+        </style>
+      </head>
+      <body>
+        <h1>Hello from nginx on DigitalOcean</h1>
+        <p>Served by nginx-proxy + acme-companion over HTTPS.</p>
+      </body>
+      </html>
+
+runcmd:
+  - mkdir -p /opt/nginx-proxy-stack/hello
+  - systemctl enable docker
+  - systemctl start docker
+  - [ bash, -lc, "cd /opt/nginx-proxy-stack && docker compose up -d" ]

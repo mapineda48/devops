@@ -18,6 +18,20 @@ storage_account_replication_type = "LRS"
 # worker_origin_fallback_html_file = "www/origin-fallback.html"
 # worker_internal_error_html_file = "www/internal-error.html"
 
+# DigitalOcean
+digitalocean_region              = "fra1"
+digitalocean_image               = "ubuntu-24-04-x64"
+digitalocean_droplet_name        = "digitalocean-mapineda48"
+digitalocean_droplet_size        = "s-2vcpu-4gb" # $6/mes: 2 vCPU, 4GB RAM, 80GB SSD
+digitalocean_subdomain           = "digitalocean"
+letsencrypt_email                = "a.pinedavegamiguel@gmail.com"
+digitalocean_ssh_key_name        = "mapineda48-do"
+digitalocean_ssh_public_key_path = "~/.ssh/id_ed25519_digitalocean.pub"
+allowed_ssh_source_cidr          = "203.0.113.10/32"
+
+# Cloudflare DNS for DigitalOcean A record
+cloudflare_zone_name = "mapineda48.de"
+
 tags = {
   Environment = "Development"
   ManagedBy   = "Terraform"

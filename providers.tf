@@ -16,3 +16,7 @@ provider "cloudflare" {
   # Alternatively, uncomment below and use a variable:
   # api_token = var.cloudflare_api_token
 }
+
+# DigitalOcean provider configuration
+# Best practice: use DIGITALOCEAN_TOKEN environment variable
+provider "digitalocean" {}

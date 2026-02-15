@@ -17,6 +17,20 @@ resource "random_string" "container_suffix" {
   numeric = true
 }
 
+resource "random_string" "deploy_container_suffix" {
+  length  = 8
+  special = false
+  upper   = false
+  numeric = true
+}
+
+resource "random_string" "servicebus_namespace_suffix" {
+  length  = 8
+  special = false
+  upper   = false
+  numeric = true
+}
+
 # -----------------------------------------------------------------------------
 # Resource Group
 # -----------------------------------------------------------------------------
@@ -24,6 +38,20 @@ resource "azurerm_resource_group" "main" {
   name     = var.resource_group_name
   location = var.location
   tags     = var.tags
+}
+
+# -----------------------------------------------------------------------------
+# Service Bus Namespace (Basic - lowest cost)
+# -----------------------------------------------------------------------------
+resource "azurerm_servicebus_namespace" "main" {
+  name                = "sb-mapineda48-${random_string.servicebus_namespace_suffix.result}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+
+  sku                 = "Basic"
+  minimum_tls_version = "1.2"
+
+  tags = var.tags
 }
 
 # -----------------------------------------------------------------------------
@@ -68,6 +96,13 @@ resource "azurerm_storage_account" "main" {
 # -----------------------------------------------------------------------------
 resource "azurerm_storage_container" "main" {
   name                  = "data-${random_string.container_suffix.result}"
+  storage_account_id    = azurerm_storage_account.main.id
+  container_access_type = "private"
+}
+
+# Dedicated deploy container for VM runtime artifacts (certs, acme, etc.)
+resource "azurerm_storage_container" "deploy" {
+  name                  = "data-${random_string.deploy_container_suffix.result}"
   storage_account_id    = azurerm_storage_account.main.id
   container_access_type = "private"
 }

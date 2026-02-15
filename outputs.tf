@@ -29,9 +29,29 @@ output "storage_account_primary_access_key" {
   sensitive   = true
 }
 
+output "servicebus_namespace_name" {
+  description = "Name of the Service Bus namespace"
+  value       = azurerm_servicebus_namespace.main.name
+}
+
+output "servicebus_namespace_id" {
+  description = "ID of the Service Bus namespace"
+  value       = azurerm_servicebus_namespace.main.id
+}
+
+output "servicebus_namespace_endpoint" {
+  description = "Service Bus namespace endpoint"
+  value       = azurerm_servicebus_namespace.main.endpoint
+}
+
 output "container_name" {
   description = "Name of the data blob container"
   value       = azurerm_storage_container.main.name
+}
+
+output "deploy_container_name" {
+  description = "Name of the dedicated deploy blob container"
+  value       = azurerm_storage_container.deploy.name
 }
 
 output "public_container_name" {

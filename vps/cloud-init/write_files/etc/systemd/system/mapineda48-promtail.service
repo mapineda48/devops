@@ -1,0 +1,23 @@
+[Unit]
+Description=Promtail (ship systemd logs to Loki)
+After=network-online.target mapineda48-loki.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+ExecStart=/usr/local/bin/promtail -config.file=/etc/promtail/config.yml
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/promtail /var/log/journal
+
+[Install]
+WantedBy=multi-user.target

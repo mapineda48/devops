@@ -1,0 +1,30 @@
+[Unit]
+Description=Mapineda48 Service Bus Listener (ngrok toggles)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+EnvironmentFile=/etc/mapineda48/servicebus.env
+WorkingDirectory=/opt/mapineda48/servicebus
+
+Environment=PYTHONUNBUFFERED=1
+
+ExecStart=/opt/mapineda48/servicebus/venv/bin/python /opt/mapineda48/servicebus/listener.py
+Restart=on-failure
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mapineda48-servicebus-listener
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

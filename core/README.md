@@ -66,6 +66,9 @@ This Terraform configuration provisions the following Azure resources:
 - **Storage Account**: Blob storage with randomly generated unique name
 - **Blob Container**: Private container with randomly generated name for data storage
 
+- **Service Bus Namespace**: Basic tier namespace
+- **Service Bus Queue**: `vps-control` queue used by `devops/vps` to receive control-plane events
+
 All resources are configured following Azure security best practices.
 
 ---
@@ -166,6 +169,14 @@ To view outputs after applying:
 ```bash
 terraform output
 ```
+
+### VPS control plane outputs
+
+These outputs are used by the `devops/vps` project:
+
+- `servicebus_vps_control_queue_name`
+- `servicebus_vps_control_listener_connection_string` (sensitive)
+- `servicebus_vps_control_sender_connection_string` (sensitive)
 
 ---
 

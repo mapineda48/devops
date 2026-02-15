@@ -44,6 +44,23 @@ output "servicebus_namespace_endpoint" {
   value       = azurerm_servicebus_namespace.main.endpoint
 }
 
+output "servicebus_vps_control_queue_name" {
+  description = "Queue name for VPS control events"
+  value       = azurerm_servicebus_queue.vps_control.name
+}
+
+output "servicebus_vps_control_sender_connection_string" {
+  description = "Connection string with send rights for VPS control queue"
+  value       = azurerm_servicebus_queue_authorization_rule.vps_control_sender.primary_connection_string
+  sensitive   = true
+}
+
+output "servicebus_vps_control_listener_connection_string" {
+  description = "Connection string with listen rights for VPS control queue"
+  value       = azurerm_servicebus_queue_authorization_rule.vps_control_listener.primary_connection_string
+  sensitive   = true
+}
+
 output "container_name" {
   description = "Name of the data blob container"
   value       = azurerm_storage_container.main.name

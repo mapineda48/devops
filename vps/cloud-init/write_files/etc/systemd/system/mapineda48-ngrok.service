@@ -1,0 +1,21 @@
+[Unit]
+Description=Ngrok tunnel for pgAdmin (fixed hostname)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/ngrok http 8081 \
+  --hostname=${NGROK_DEV_DOMAIN} \
+  --log=stdout \
+  --log-level=info
+Restart=on-failure
+RestartSec=3
+KillSignal=SIGINT
+TimeoutStopSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mapineda48-ngrok
+
+[Install]
+# No WantedBy: controlled by Service Bus listener

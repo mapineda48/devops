@@ -55,6 +55,35 @@ resource "azurerm_servicebus_namespace" "main" {
 }
 
 # -----------------------------------------------------------------------------
+# Service Bus Queue: VPS control plane
+# -----------------------------------------------------------------------------
+resource "azurerm_servicebus_queue" "vps_control" {
+  name         = "vps-control"
+  namespace_id = azurerm_servicebus_namespace.main.id
+
+  # Keep defaults minimal for Basic tier.
+}
+
+# Separate policies for least-privilege (send vs listen)
+resource "azurerm_servicebus_queue_authorization_rule" "vps_control_sender" {
+  name     = "vps-control-sender"
+  queue_id = azurerm_servicebus_queue.vps_control.id
+
+  listen = false
+  send   = true
+  manage = false
+}
+
+resource "azurerm_servicebus_queue_authorization_rule" "vps_control_listener" {
+  name     = "vps-control-listener"
+  queue_id = azurerm_servicebus_queue.vps_control.id
+
+  listen = true
+  send   = false
+  manage = false
+}
+
+# -----------------------------------------------------------------------------
 # Storage Account
 # Security configuration:
 # - TLS 1.2 minimum (Azure requires 1.2+ starting Aug 2025)

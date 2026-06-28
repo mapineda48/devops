@@ -25,7 +25,7 @@ variable "storage_account_replication_type" {
 variable "dns_zone_name" {
   description = "Name of the DNS zone"
   type        = string
-  default     = "mapineda48.de"
+  default     = "mapineda48.com"
 }
 
 variable "dns_www_target" {
@@ -45,7 +45,7 @@ variable "cloudflare_account_id" {
 variable "cloudflare_zone_name" {
   description = "Domain name to manage in Cloudflare (e.g., example.com)"
   type        = string
-  default     = null
+  default     = "mapineda48.com"
 }
 
 # Cloudflare Worker settings
